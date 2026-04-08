@@ -5,7 +5,7 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCcU1hQhTGlYIbmTs9OrBOK-aV1iD0KJ5Q",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: "lioralogg.firebaseapp.com",
   projectId: "lioralogg",
   storageBucket: "lioralogg.firebasestorage.app",

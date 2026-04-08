@@ -4,7 +4,7 @@
 **Your API key was shared in chat. Please generate a NEW key after setup:**
 1. Go to https://makersuite.google.com/app/apikey
 2. Create a new API key
-3. Delete the old key: `AIzaSyBxIin8CLGwvgXfcJQjR0hYLXwUP1es5Is`
+3. Delete the old key from your code and configuration.
 4. Use the new key in Step 3 below
 
 ---
