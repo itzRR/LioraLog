@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // User documents - owner, supervisors, and admins can access
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isSupervisorOf(userId) || isAdmin();
+      allow write: if isOwner(userId) || isAdmin();
+    }
+    
+    // Log entries - owner, supervisors, and admins can read
+    match /logs/{logId} {
+      allow read: if isAuthenticated() && 
+                     (isOwner(resource.data.userId) || 
+                      isSupervisorOf(resource.data.userId) ||
+                      isAdmin());
+      allow create: if isAuthenticated() && isCreatingOwnLog();
+      allow update, delete: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+    }
+    
+    // Tasks - owner, supervisors, and admins can read
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated() && 
+                     (isOwner(resource.data.userId) || 
+                      isSupervisorOf(resource.data.userId) ||
+                      isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+    }
+    
+    // Alerts - owner and admins can access
+    match /alerts/{alertId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow write: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+    }
+    
+    // Supervisor-student relationships - admins have full access
+    match /supervisor_students/{relationId} {
+      allow read: if isAuthenticated() && 
+                     (request.auth.uid == resource.data.supervisorId || 
+                      request.auth.uid == resource.data.studentId ||
+                      isAdmin());
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && 
+                               (request.auth.uid == resource.data.supervisorId ||
+                                isAdmin());
+    }
+    
+    // Reports - owner, supervisors, and admins can read
+    match /reports/{reportId} {
+      allow read: if isAuthenticated() && 
+                     (isOwner(resource.data.userId) || 
+                      isSupervisorOf(resource.data.userId) ||
+                      isAdmin());
+      allow create, update: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+    }
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && userId == request.auth.uid;
+    }
+    
+    function isCreatingOwnLog() {
+      return request.resource.data.userId == request.auth.uid;
+    }
+    
+    function isSupervisorOf(studentId) {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/supervisor_students/$(request.auth.uid + '_' + studentId));
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Default deny-all rule
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

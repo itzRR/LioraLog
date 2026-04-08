@@ -1,0 +1,16 @@
+name = "liora-ai-worker"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# Your deployed worker will be available at:
+# https://liora-ai-worker.YOUR-SUBDOMAIN.workers.dev
+
+[vars]
+ENVIRONMENT = "production"
+
+# To set your API key securely:
+# 1. Install Wrangler: npm install -g wrangler
+# 2. Login: wrangler login
+# 3. Set secret: wrangler secret put GEMINI_API_KEY
+# 4. Enter your API key when prompted
+# 5. Deploy: wrangler deploy
