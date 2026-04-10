@@ -20,3 +20,5 @@ export function parseMarkdown(text: string): string {
   
   return parsed;
 }
+
+// Core Markdown processing utilities
