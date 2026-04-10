@@ -99,24 +99,24 @@ const SupervisorDashboard = () => {
     <div className="min-h-screen bg-gray-900 text-gray-200">
       <header className="bg-gray-800/50 border-b border-cyan-400/20 shadow-lg shadow-cyan-500/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 gap-4">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-full">
-                <Users className="w-6 h-6 text-white" />
+                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+                <h1 className="text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
                   {userProfile.role === 'admin' ? 'ADMIN' : 'SUPERVISOR'} DASHBOARD
                 </h1>
-                <p className="text-sm text-gray-400">STUDENT PROGRESS OVERVIEW</p>
+                <p className="text-xs sm:text-sm text-gray-400">STUDENT PROGRESS OVERVIEW</p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center w-full sm:w-auto">
               <Button 
                 variant="outline" 
                 onClick={() => navigate('/dashboard')}
-                className="border-gray-600 hover:bg-gray-700/50 hover:border-cyan-400 text-gray-300"
+                className="border-gray-600 hover:bg-gray-700/50 hover:border-cyan-400 text-gray-300 w-full sm:w-auto"
               >
                 <ChevronLeft className="w-4 h-4 mr-2" />
                 BACK TO DASHBOARD
@@ -126,7 +126,25 @@ const SupervisorDashboard = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        {/* Welcome Section - Enhanced */}
+        <div className="mb-6 sm:mb-8 bg-gradient-to-r from-gray-800/50 via-gray-800/30 to-gray-800/50 border border-cyan-400/20 rounded-xl p-6 backdrop-blur-sm">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg">
+              <Users className="w-5 h-5 text-white" />
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500">
+              SYSTEM ONLINE // {userProfile.role.toUpperCase()}, {userProfile?.displayName?.split(' ')[0]}
+            </h2>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap text-gray-400">
+             <span>You are currently overseeing</span>
+             <Badge className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold px-3 py-1 text-sm">
+               {students.length} {students.length === 1 ? 'STUDENT' : 'STUDENTS'}
+             </Badge>
+             <span>• Ensure everyone is on track! 🚀</span>
+          </div>
+        </div>
         {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card className="bg-gray-800/50 border-cyan-400/20">
