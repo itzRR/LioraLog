@@ -18,3 +18,5 @@ export default defineConfig(({ mode }) => ({
     },
   },
 }));
+
+// Vite bundler configuration
