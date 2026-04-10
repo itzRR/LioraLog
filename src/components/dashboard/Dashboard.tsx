@@ -429,32 +429,39 @@ if (loading || !userProfile) {
               />
             )}
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
-              <div className="text-left sm:text-right">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full sm:w-auto gap-3 sm:gap-4">
+              <div className="text-left sm:text-right w-full sm:w-auto">
                 <p className="text-sm font-medium text-cyan-400 truncate max-w-[200px] sm:max-w-none">{userProfile?.displayName}</p>
                 <p className="text-xs text-gray-400 uppercase">{userProfile?.role}</p>
               </div>
-              <SystemGuideModal />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleMute}
-                className="text-cyan-400 hover:text-cyan-300 hover:bg-gray-700/50"
-                title={isMuted ? "Unmute Liora" : "Mute Liora"}
-              >
-                {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={async () => {
-                  await logout();
-                  navigate('/login');
-                }}
-                className="border-gray-600 hover:bg-gray-700/50 hover:border-cyan-400 text-gray-300 w-full sm:w-auto"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                LOGOUT
-              </Button>
+              
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
+                <SystemGuideModal />
+                
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleMute}
+                    className="text-cyan-400 hover:text-cyan-300 hover:bg-gray-700/50 px-2"
+                    title={isMuted ? "Unmute Liora" : "Mute Liora"}
+                  >
+                    {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      await logout();
+                      navigate('/login');
+                    }}
+                    className="border-gray-600 hover:bg-gray-700/50 hover:border-cyan-400 text-gray-300"
+                  >
+                    <LogOut className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">LOGOUT</span>
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
