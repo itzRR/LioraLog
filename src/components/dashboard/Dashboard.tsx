@@ -35,6 +35,7 @@ import EditLog from './EditLog';
 import CalendarView from './CalendarView';
 import TaskManager from './TaskManager';
 import { LioraChatButton } from './LioraChat';
+import SystemGuideModal from './SystemGuideModal';
 
 
 
@@ -433,6 +434,7 @@ if (loading || !userProfile) {
                 <p className="text-sm font-medium text-cyan-400 truncate max-w-[200px] sm:max-w-none">{userProfile?.displayName}</p>
                 <p className="text-xs text-gray-400 uppercase">{userProfile?.role}</p>
               </div>
+              <SystemGuideModal />
               <Button
                 variant="ghost"
                 size="sm"
