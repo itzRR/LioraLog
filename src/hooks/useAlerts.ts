@@ -88,3 +88,5 @@ export function useAlerts() {
     refreshAlerts: fetchAlerts
   };
 }
+
+// Handles alert generation and management
