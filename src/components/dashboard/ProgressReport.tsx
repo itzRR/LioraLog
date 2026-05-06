@@ -40,6 +40,59 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+const AI_QUOTES = [
+  "Estimate uses task priority, completion percentage, blocked or overdue work, recent logs, and data consistency.",
+  "I'm an AI, not a wizard 🧙‍♂️... but I'm crunching the numbers!",
+  "Predicting the future using your past logs... no crystal ball required 🔮",
+  "Analyzing your workflow velocity... and a tiny bit of hope ✨",
+  "Doing the math so you don't have to! 🧮",
+];
+
+const TypewriterQuote = () => {
+  const [quoteIndex, setQuoteIndex] = useState(0);
+  const [displayedText, setDisplayedText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const currentQuote = AI_QUOTES[quoteIndex];
+    let timer: NodeJS.Timeout;
+
+    if (isDeleting) {
+      if (displayedText.length === 0) {
+        setIsDeleting(false);
+        setQuoteIndex((prev) => (prev + 1) % AI_QUOTES.length);
+      } else {
+        timer = setTimeout(() => {
+          setDisplayedText(currentQuote.substring(0, displayedText.length - 1));
+        }, 20);
+      }
+    } else {
+      if (displayedText.length === currentQuote.length) {
+        timer = setTimeout(() => {
+          setIsDeleting(true);
+        }, 5000);
+      } else {
+        timer = setTimeout(() => {
+          setDisplayedText(currentQuote.substring(0, displayedText.length + 1));
+        }, 40);
+      }
+    }
+
+    return () => clearTimeout(timer);
+  }, [displayedText, isDeleting, quoteIndex]);
+
+  return (
+    <span className="min-h-[32px] inline-block">
+      {displayedText}
+      <motion.span
+        animate={{ opacity: [1, 0] }}
+        transition={{ repeat: Infinity, duration: 0.8 }}
+        className="inline-block w-[2px] h-3 bg-purple-400 ml-1 align-middle"
+      />
+    </span>
+  );
+};
+
 const ProgressReport = () => {
   const { userProfile } = useAuth();
   const navigate = useNavigate();
@@ -507,10 +560,10 @@ const ProgressReport = () => {
                     </p>
                   </div>
 
-                  <div className="flex items-start gap-2 text-xs text-gray-500 italic bg-purple-900/10 p-2 rounded border border-purple-500/10">
-                    <span>AI</span>
-                    <p>
-                      Estimate uses task priority, completion percentage, blocked or overdue work, recent logs, and data consistency.
+                  <div className="flex items-start gap-2 text-xs text-gray-500 italic bg-purple-900/10 p-2 rounded border border-purple-500/10 min-h-[48px]">
+                    <span className="font-bold text-purple-400 mt-1">AI</span>
+                    <p className="flex-1">
+                      <TypewriterQuote />
                     </p>
                   </div>
                 </div>
