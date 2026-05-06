@@ -40,10 +40,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const AI_QUOTES = [
+const AI_QUOTES_GOOD = [
   "Estimate uses task priority, completion percentage, blocked or overdue work, recent logs, and data consistency.",
   "I'm an AI, not a wizard 🧙‍♂️... but I'm crunching the numbers!",
   "Predicting the future using your past logs... no crystal ball required 🔮",
+  "Analyzing your workflow velocity... you're doing great! ✨",
+  "Doing the math so you don't have to! 🧮",
+  "Your progress is looking solid. Keep it up! 🚀"
+];
+
+const AI_QUOTES_BAD = [
   "Calculating expected completion... based on your *ahem* 'progress' 📉",
   "Analyzing your procrastination levels... Emotional damage! 💔",
   "Trying to find your productivity... ERROR 404: Not Found 🤖",
@@ -53,19 +59,29 @@ const AI_QUOTES = [
   "I'm processing your logs... wait, what logs? 🕵️‍♂️"
 ];
 
-const TypewriterQuote = () => {
+const TypewriterQuote = ({ isDoingPoorly }: { isDoingPoorly: boolean }) => {
   const [quoteIndex, setQuoteIndex] = useState(0);
   const [displayedText, setDisplayedText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const quotes = isDoingPoorly ? AI_QUOTES_BAD : AI_QUOTES_GOOD;
+
+  // Reset text if doing poorly status changes
+  useEffect(() => {
+    setQuoteIndex(0);
+    setDisplayedText("");
+    setIsDeleting(false);
+  }, [isDoingPoorly]);
 
   useEffect(() => {
-    const currentQuote = AI_QUOTES[quoteIndex];
+    const currentQuote = quotes[quoteIndex % quotes.length];
+    if (!currentQuote) return;
+    
     let timer: NodeJS.Timeout;
 
     if (isDeleting) {
       if (displayedText.length === 0) {
         setIsDeleting(false);
-        setQuoteIndex((prev) => (prev + 1) % AI_QUOTES.length);
+        setQuoteIndex((prev) => (prev + 1) % quotes.length);
       } else {
         timer = setTimeout(() => {
           setDisplayedText(currentQuote.substring(0, displayedText.length - 1));
@@ -84,7 +100,7 @@ const TypewriterQuote = () => {
     }
 
     return () => clearTimeout(timer);
-  }, [displayedText, isDeleting, quoteIndex]);
+  }, [displayedText, isDeleting, quoteIndex, quotes]);
 
   return (
     <span className="min-h-[32px] inline-block">
@@ -568,7 +584,13 @@ const ProgressReport = () => {
                   <div className="flex items-start gap-2 text-xs text-gray-500 italic bg-purple-900/10 p-2 rounded border border-purple-500/10 min-h-[48px]">
                     <span className="font-bold text-purple-400 mt-1">AI</span>
                     <p className="flex-1">
-                      <TypewriterQuote />
+                      <TypewriterQuote 
+                        isDoingPoorly={
+                          calculatePrediction().status === 'Behind' || 
+                          calculatePrediction().status === 'At Risk' || 
+                          (calculatePrediction().currentVelocity === 0 && calculatePrediction().status !== 'Completed')
+                        } 
+                      />
                     </p>
                   </div>
                 </div>
