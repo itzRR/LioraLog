@@ -6,9 +6,11 @@ import { Input } from '@/components/ui/input';
 import { chatWithLiora, type ChatMessage } from '@/lib/geminiClient';
 import { useNotification } from '@/contexts/NotificationContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { parseMarkdown } from '@/lib/markdownParser';
+import { predictProgress } from '@/lib/aiAnalytics';
+import { LogEntry, Task } from '@/types';
 
 
 interface LioraChatProps {
@@ -55,35 +57,35 @@ export const LioraChat: React.FC<LioraChatProps> = ({ isOpen, onClose }) => {
         `- "${p.researchTitle}" (${p.fieldDomain || 'No domain'}, ${p.isActive ? 'Active' : 'Inactive'}, ${p.startDate} to ${p.endDate})`
       ).join('\n');
 
-      // Get recent logs (last 5)
+      // Fetch ALL logs and tasks to compute accurate predictions
       const logsQuery = query(
         collection(db, 'logs'),
         where('userId', '==', userProfile.uid),
-        orderBy('date', 'desc'),
-        limit(5)
+        orderBy('date', 'desc')
       );
-      const logsSnapshot = await getDocs(logsQuery);
-      const recentLogs = logsSnapshot.docs.map(doc => {
-        const data = doc.data();
+      const tasksQuery = query(
+        collection(db, 'tasks'),
+        where('userId', '==', userProfile.uid)
+      );
+
+      const [logsSnapshot, tasksSnapshot] = await Promise.all([getDocs(logsQuery), getDocs(tasksQuery)]);
+      
+      const allLogs = logsSnapshot.docs.map(doc => doc.data() as LogEntry);
+      const allTasks = tasksSnapshot.docs.map(doc => doc.data() as Task);
+
+      // Get recent logs (last 5) for text context
+      const recentLogs = allLogs.slice(0, 5).map(data => {
         const hours = data.actualHoursSpent ? `, ${data.actualHoursSpent}h spent` : '';
         const project = data.projectId ? ` [Project: ${projectMap[data.projectId] || 'Unknown'}]` : '';
         return `${data.date}${project}: ${data.tasksCompleted}${hours}`;
       }).join('\n');
 
-      // Get active tasks (not completed)
-      const tasksQuery = query(
-        collection(db, 'tasks'),
-        where('userId', '==', userProfile.uid),
-        where('status', '!=', 'completed'),
-        limit(10)
-      );
-      const tasksSnapshot = await getDocs(tasksQuery);
       const now = new Date();
       const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
       const currentDateReadable = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-      const activeTasks = tasksSnapshot.docs.map(doc => {
-        const data = doc.data();
+      // Get active tasks (not completed), limit 10 for text context
+      const activeTasks = allTasks.filter(t => t.status !== 'completed').slice(0, 10).map(data => {
         const projectName = data.projectId ? projectMap[data.projectId] || 'Unknown Project' : 'No Project';
         const effort = [
           data.size ? `size: ${data.size}` : null,
@@ -94,18 +96,15 @@ export const LioraChat: React.FC<LioraChatProps> = ({ isOpen, onClose }) => {
         // Pre-compute deadline status so the AI doesn't have to guess
         let deadlineStatus = '';
         if (data.deadline) {
-          // End of deadline day (23:59:59) is when the deadline expires
           const deadlineEnd = new Date(data.deadline + 'T23:59:59');
           const diffMs = deadlineEnd.getTime() - now.getTime();
           const diffHours = Math.round(diffMs / (1000 * 60 * 60));
           const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
           if (diffMs < 0) {
-            // Overdue
             const overdueDays = Math.abs(Math.floor(diffMs / (1000 * 60 * 60 * 24)));
             deadlineStatus = `OVERDUE by ${overdueDays} day(s)`;
           } else if (diffHours <= 24) {
-            // Within 24 hours — show hours for urgency
             deadlineStatus = `⚠️ URGENT: only ~${diffHours} hour(s) remaining!`;
           } else if (diffDays <= 2) {
             deadlineStatus = `due tomorrow (~${diffHours} hours left)`;
@@ -116,6 +115,21 @@ export const LioraChat: React.FC<LioraChatProps> = ({ isOpen, onClose }) => {
         return `${data.title} [Project: ${projectName}] (${data.status}, deadline: ${data.deadline} — ${deadlineStatus}${effort ? `, ${effort}` : ''})`;
       }).join('\n');
 
+      // Calculate AI Predictions for each active project
+      const systemPredictions = projects.filter(p => p.isActive).map(project => {
+        const projectLogs = allLogs.filter(log => log.projectId === project.id || !log.projectId); // Include general logs
+        const projectTasks = allTasks.filter(task => task.projectId === project.id);
+        const prediction = predictProgress(projectLogs, projectTasks, project.endDate);
+        
+        return `- ${project.researchTitle}:
+    Status: ${prediction.status} (Risk: ${prediction.riskLevel})
+    Predicted Completion: ${new Date(prediction.expectedCompletionDate).toLocaleDateString()}
+    Velocity: ${prediction.currentVelocity} tasks/week
+    Progress: ${prediction.progressPercentage}% (${prediction.completedWork} / ${prediction.totalWork} work units)
+    Confidence Level: ${prediction.confidenceLevel}%
+    ${prediction.delayWeeks ? `Delay: ${prediction.delayWeeks} weeks behind schedule` : 'On track or ahead of schedule'}`;
+      }).join('\n\n');
+
       return `
 IMPORTANT: Today's date is ${currentDateReadable} (${todayStr}). You MUST use this date when discussing deadlines. Do NOT guess or assume a different date.
 
@@ -124,6 +138,9 @@ Name: ${userProfile.displayName || 'User'}
 
 Research Projects:
 ${projectDetails || 'No projects yet'}
+
+SYSTEM PREDICTIONS (Use this to answer questions about progress, delays, and expected completion):
+${systemPredictions || 'No active predictions'}
 
 Recent Activity (last 5 logs):
 ${recentLogs || 'No recent logs'}
