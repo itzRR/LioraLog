@@ -46,9 +46,14 @@ export const LioraChat: React.FC<LioraChatProps> = ({ isOpen, onClose }) => {
     if (!userProfile?.uid) return '';
 
     try {
-      // Get user's projects
+      // Build project lookup map (id -> name)
       const projects = userProfile.researchProjects || [];
-      const projectNames = projects.map(p => p.researchTitle).join(', ');
+      const projectMap: Record<string, string> = {};
+      projects.forEach(p => { projectMap[p.id] = p.researchTitle; });
+
+      const projectDetails = projects.map(p => 
+        `- "${p.researchTitle}" (${p.fieldDomain || 'No domain'}, ${p.isActive ? 'Active' : 'Inactive'}, ${p.startDate} to ${p.endDate})`
+      ).join('\n');
 
       // Get recent logs (last 5)
       const logsQuery = query(
@@ -61,7 +66,8 @@ export const LioraChat: React.FC<LioraChatProps> = ({ isOpen, onClose }) => {
       const recentLogs = logsSnapshot.docs.map(doc => {
         const data = doc.data();
         const hours = data.actualHoursSpent ? `, ${data.actualHoursSpent}h spent` : '';
-        return `${data.date}: ${data.tasksCompleted}${hours}`;
+        const project = data.projectId ? ` [Project: ${projectMap[data.projectId] || 'Unknown'}]` : '';
+        return `${data.date}${project}: ${data.tasksCompleted}${hours}`;
       }).join('\n');
 
       // Get active tasks (not completed)
@@ -78,6 +84,7 @@ export const LioraChat: React.FC<LioraChatProps> = ({ isOpen, onClose }) => {
 
       const activeTasks = tasksSnapshot.docs.map(doc => {
         const data = doc.data();
+        const projectName = data.projectId ? projectMap[data.projectId] || 'Unknown Project' : 'No Project';
         const effort = [
           data.size ? `size: ${data.size}` : null,
           data.difficulty ? `difficulty: ${data.difficulty}` : null,
@@ -106,7 +113,7 @@ export const LioraChat: React.FC<LioraChatProps> = ({ isOpen, onClose }) => {
             deadlineStatus = `due in ${diffDays} days`;
           }
         }
-        return `${data.title} (${data.status}, deadline: ${data.deadline} — ${deadlineStatus}${effort ? `, ${effort}` : ''})`;
+        return `${data.title} [Project: ${projectName}] (${data.status}, deadline: ${data.deadline} — ${deadlineStatus}${effort ? `, ${effort}` : ''})`;
       }).join('\n');
 
       return `
@@ -114,7 +121,9 @@ IMPORTANT: Today's date is ${currentDateReadable} (${todayStr}). You MUST use th
 
 RESEARCHER'S CONTEXT:
 Name: ${userProfile.displayName || 'User'}
-Projects: ${projectNames || 'No projects yet'}
+
+Research Projects:
+${projectDetails || 'No projects yet'}
 
 Recent Activity (last 5 logs):
 ${recentLogs || 'No recent logs'}
