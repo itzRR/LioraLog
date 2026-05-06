@@ -316,7 +316,7 @@ const ProgressReport = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-32">
         {loading ? (
           <div className="text-center py-12">
             <p className="text-gray-400">LOADING PROGRESS DATA...</p>
