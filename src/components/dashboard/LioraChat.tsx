@@ -117,6 +117,22 @@ export const LioraChat: React.FC<LioraChatProps> = ({ isOpen, onClose }) => {
 
       // Calculate AI Predictions for each active project
       const systemPredictions = projects.filter(p => p.isActive).map(project => {
+        // Check if project is overdue
+        let isProjectOverdue = false;
+        if (project.endDate) {
+          const endDate = new Date(project.endDate + 'T23:59:59');
+          if (endDate.getTime() < now.getTime()) {
+            isProjectOverdue = true;
+          }
+        }
+
+        if (isProjectOverdue) {
+          return `- ${project.researchTitle}:
+    Status: 🚨 PROJECT OVERDUE
+    Original Deadline: ${project.endDate}
+    Note: The project deadline has already passed. Please advise the user to review their overdue tasks and update their project timeline.`;
+        }
+
         const projectLogs = allLogs.filter(log => log.projectId === project.id || !log.projectId); // Include general logs
         const projectTasks = allTasks.filter(task => task.projectId === project.id);
         const prediction = predictProgress(projectLogs, projectTasks, project.endDate);
