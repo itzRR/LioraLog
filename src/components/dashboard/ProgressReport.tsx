@@ -582,7 +582,7 @@ const ProgressReport = () => {
                   </div>
 
                   <div className="flex items-start gap-2 text-xs text-gray-500 italic bg-purple-900/10 p-2 rounded border border-purple-500/10 min-h-[48px]">
-                    <span className="font-bold text-purple-400 mt-1">AI</span>
+                    <span className="font-bold text-purple-400 mt-1">Liora</span>
                     <p className="flex-1">
                       <TypewriterQuote 
                         isDoingPoorly={
