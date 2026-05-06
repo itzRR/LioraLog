@@ -21,6 +21,7 @@ export interface LogEntry {
   problems?: string;
   feedback?: string;
   moodRating?: number;
+  actualHoursSpent?: number | null;
 }
 
 export interface Task {
@@ -28,6 +29,9 @@ export interface Task {
   status: 'not_started' | 'in_progress' | 'completed' | 'blocked';
   deadline: string;
   priority: 'low' | 'medium' | 'high' | 'critical';
+  size?: 'small' | 'medium' | 'large' | 'very_large';
+  difficulty?: 'easy' | 'normal' | 'hard';
+  estimatedHours?: number | null;
 }
 
 /**

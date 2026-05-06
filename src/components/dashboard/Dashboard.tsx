@@ -48,6 +48,7 @@ interface LogEntry {
   problems: string;
   taskStatus: 'todo' | 'inprogress' | 'done';
   moodRating?: number;
+  actualHoursSpent?: number | null;
   userId: string;
   createdAt: string;
 }

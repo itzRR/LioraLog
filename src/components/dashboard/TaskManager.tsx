@@ -40,6 +40,9 @@ const TaskManager: React.FC<TaskManagerProps> = ({ projectId }) => {
     title: '',
     description: '',
     priority: 'medium' as Task['priority'],
+    size: 'medium' as NonNullable<Task['size']>,
+    difficulty: 'normal' as NonNullable<Task['difficulty']>,
+    estimatedHours: '',
     status: 'not_started' as Task['status'],
     deadline: '',
     completionPercentage: 0,
@@ -53,6 +56,9 @@ const TaskManager: React.FC<TaskManagerProps> = ({ projectId }) => {
         title: task.title,
         description: task.description,
         priority: task.priority,
+        size: task.size || 'medium',
+        difficulty: task.difficulty || 'normal',
+        estimatedHours: task.estimatedHours?.toString() || '',
         status: task.status,
         deadline: new Date(task.deadline).toISOString().split('T')[0],
         completionPercentage: task.completionPercentage,
@@ -64,6 +70,9 @@ const TaskManager: React.FC<TaskManagerProps> = ({ projectId }) => {
         title: '',
         description: '',
         priority: 'medium',
+        size: 'medium',
+        difficulty: 'normal',
+        estimatedHours: '',
         status: 'not_started',
         deadline: '',
         completionPercentage: 0,
@@ -88,17 +97,24 @@ const TaskManager: React.FC<TaskManagerProps> = ({ projectId }) => {
       }
     }
     
+    const parsedEstimatedHours = Number(formData.estimatedHours);
+    const estimatedHours = formData.estimatedHours.trim() === '' || Number.isNaN(parsedEstimatedHours)
+      ? null
+      : Math.max(0, parsedEstimatedHours);
+    const taskPayload = {
+      ...formData,
+      estimatedHours,
+      deadline: new Date(formData.deadline).toISOString(),
+      projectId: selectedProject || projectId || ''
+    };
+
     if (editingTask) {
       await updateTask(editingTask.id, {
-        ...formData,
-        deadline: new Date(formData.deadline).toISOString(),
-        projectId: selectedProject || projectId || ''
+        ...taskPayload
       });
     } else {
       await createTask({
-        ...formData,
-        projectId: selectedProject || projectId || '',
-        deadline: new Date(formData.deadline).toISOString()
+        ...taskPayload
       });
     }
     
@@ -237,6 +253,12 @@ const TaskManager: React.FC<TaskManagerProps> = ({ projectId }) => {
                         <Badge className={getPriorityColor(task.priority)}>
                           {task.priority.toUpperCase()}
                         </Badge>
+                        <Badge className="bg-gray-700/60 text-gray-300 border-gray-600">
+                          {(task.size || 'medium').replace('_', ' ').toUpperCase()}
+                        </Badge>
+                        <Badge className="bg-gray-700/60 text-gray-300 border-gray-600">
+                          {(task.difficulty || 'normal').toUpperCase()}
+                        </Badge>
                       </div>
                       {task.description && (
                         <p className="text-sm text-gray-400 mb-2">{task.description}</p>
@@ -247,6 +269,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({ projectId }) => {
                           Due: {format(new Date(task.deadline), 'MMM dd, yyyy')}
                         </span>
                         <span>Status: {task.status.replace('_', ' ')}</span>
+                        {task.estimatedHours ? <span>Est: {task.estimatedHours}h</span> : null}
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -286,7 +309,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({ projectId }) => {
 
       {/* Task Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-gray-800 border-cyan-400/20 text-white">
+        <DialogContent className="bg-gray-800 border-cyan-400/20 text-white max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-cyan-400">
               {editingTask ? 'Edit Task' : 'Create New Task'}
@@ -341,6 +364,47 @@ const TaskManager: React.FC<TaskManagerProps> = ({ projectId }) => {
                     <SelectItem value="blocked">Blocked</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <Label className="text-gray-300">Task Size</Label>
+                <Select value={formData.size} onValueChange={(value: NonNullable<Task['size']>) => setFormData({...formData, size: value})}>
+                  <SelectTrigger className="bg-gray-700/50 border-gray-600 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-600">
+                    <SelectItem value="small">Small</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="large">Large</SelectItem>
+                    <SelectItem value="very_large">Very Large</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-gray-300">Difficulty</Label>
+                <Select value={formData.difficulty} onValueChange={(value: NonNullable<Task['difficulty']>) => setFormData({...formData, difficulty: value})}>
+                  <SelectTrigger className="bg-gray-700/50 border-gray-600 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-600">
+                    <SelectItem value="easy">Easy</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="hard">Hard</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-gray-300">Est. Hours</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.25"
+                  value={formData.estimatedHours}
+                  onChange={(e) => setFormData({...formData, estimatedHours: e.target.value})}
+                  placeholder="Optional"
+                  className="bg-gray-700/50 border-gray-600 text-white"
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">

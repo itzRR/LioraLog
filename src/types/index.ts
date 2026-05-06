@@ -36,6 +36,7 @@ export interface LogEntry {
   problems: string;
   taskStatus: 'todo' | 'inprogress' | 'done';
   moodRating?: number;
+  actualHoursSpent?: number | null;
   userId: string;
   projectId?: string; // Optional: link to specific research project
   createdAt: string;
@@ -48,6 +49,9 @@ export interface Task {
   title: string;
   description: string;
   priority: 'low' | 'medium' | 'high' | 'critical';
+  size?: 'small' | 'medium' | 'large' | 'very_large';
+  difficulty?: 'easy' | 'normal' | 'hard';
+  estimatedHours?: number | null;
   status: 'not_started' | 'in_progress' | 'completed' | 'blocked';
   deadline: string;
   completionPercentage: number;
@@ -109,6 +113,14 @@ export interface ProgressPrediction {
   currentVelocity: number;
   predictedVelocity: number;
   remainingWork: number;
+  totalWork?: number;
+  completedWork?: number;
+  progressPercentage?: number;
+  weeksNeeded?: number;
+  daysNeeded?: number;
+  delayWeeks?: number;
+  status?: 'Completed' | 'On Track' | 'At Risk' | 'Behind' | 'Unknown';
+  riskLevel?: 'Low' | 'Medium' | 'High';
 }
 
 export interface MoodProductivityData {

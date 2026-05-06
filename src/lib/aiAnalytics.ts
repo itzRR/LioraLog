@@ -11,57 +11,121 @@ import { subDays, differenceInDays, parseISO, isAfter } from 'date-fns';
 // ============================================
 
 /**
- * Predicts project completion date using linear regression on historical progress
+ * Predicts project completion using weighted task progress plus recent log velocity.
+ * Task completion percentages provide the current position; logs estimate pace.
  */
 export function predictProgress(
   logs: LogEntry[],
   tasks: Task[],
   projectEndDate: string
 ): ProgressPrediction {
-  if (logs.length < 3) {
+  const weightedTasks = tasks.map(task => {
+    const weight = getTaskWeight(task);
+    const completion = task.status === 'completed'
+      ? 100
+      : Math.max(0, Math.min(100, task.completionPercentage || 0));
+
     return {
-      expectedCompletionDate: projectEndDate,
+      task,
+      weight,
+      completed: weight * (completion / 100),
+      remaining: weight * (1 - completion / 100)
+    };
+  });
+
+  const totalWork = weightedTasks.reduce((sum, item) => sum + item.weight, 0);
+  const completedWork = weightedTasks.reduce((sum, item) => sum + item.completed, 0);
+  const remainingWork = weightedTasks.reduce((sum, item) => sum + item.remaining, 0);
+  const progressPercentage = totalWork > 0 ? (completedWork / totalWork) * 100 : 0;
+
+  if (tasks.length === 0) {
+    return {
+      expectedCompletionDate: projectEndDate || new Date().toISOString(),
       confidenceLevel: 0,
       currentVelocity: 0,
       predictedVelocity: 0,
-      remainingWork: tasks.filter(t => t.status !== 'completed').length
+      remainingWork: 0,
+      totalWork: 0,
+      completedWork: 0,
+      progressPercentage: 0,
+      weeksNeeded: 0,
+      daysNeeded: 0,
+      delayWeeks: 0,
+      status: 'Unknown',
+      riskLevel: 'Low'
     };
   }
 
-  // Calculate weekly velocity (completed tasks per week)
-  const weeks = groupLogsByWeek(logs);
-  const velocities = weeks.map(week => {
-    const completedInWeek = week.filter(log => log.taskStatus === 'done').length;
-    return completedInWeek;
-  });
+  if (remainingWork <= 0) {
+    return {
+      expectedCompletionDate: new Date().toISOString(),
+      confidenceLevel: Math.min(100, 65 + logs.length * 3),
+      currentVelocity: 0,
+      predictedVelocity: 0,
+      remainingWork: 0,
+      totalWork: round(totalWork),
+      completedWork: round(completedWork),
+      progressPercentage: 100,
+      weeksNeeded: 0,
+      daysNeeded: 0,
+      delayWeeks: 0,
+      status: 'Completed',
+      riskLevel: 'Low'
+    };
+  }
 
-  // Simple linear regression for velocity trend
-  const avgVelocity = velocities.reduce((a, b) => a + b, 0) / velocities.length;
-  const currentVelocity = velocities.slice(-2).reduce((a, b) => a + b, 0) / 2;
+  const weeklyVelocities = calculateWeeklyWorkVelocities(logs);
+  const averageVelocity = weeklyVelocities.length > 0
+    ? weeklyVelocities.reduce((sum, velocity) => sum + velocity, 0) / weeklyVelocities.length
+    : 0;
+  const recentVelocities = weeklyVelocities.slice(-3);
+  const currentVelocity = recentVelocities.length > 0
+    ? recentVelocities.reduce((sum, velocity) => sum + velocity, 0) / recentVelocities.length
+    : averageVelocity;
 
-  // Predict future velocity (weighted average favoring recent data)
-  const predictedVelocity = (currentVelocity * 0.7) + (avgVelocity * 0.3);
+  const rawPredictedVelocity = currentVelocity > 0 && averageVelocity > 0
+    ? (currentVelocity * 0.65) + (averageVelocity * 0.35)
+    : Math.max(currentVelocity, averageVelocity);
 
-  // Calculate remaining work
-  const remainingTasks = tasks.filter(t => t.status !== 'completed').length;
-  const avgTaskCompletionPerLog = 1.2; // Assumption: each log completes ~1.2 tasks
-  const remainingWork = remainingTasks / avgTaskCompletionPerLog;
+  const blockedWork = weightedTasks
+    .filter(({ task }) => task.status === 'blocked')
+    .reduce((sum, item) => sum + item.remaining, 0);
+  const blockedRatio = remainingWork > 0 ? blockedWork / remainingWork : 0;
+  const overdueWork = weightedTasks
+    .filter(({ task }) => task.deadline && new Date(task.deadline) < new Date() && task.status !== 'completed')
+    .reduce((sum, item) => sum + item.remaining, 0);
+  const overdueRatio = remainingWork > 0 ? overdueWork / remainingWork : 0;
 
-  // Predict completion
-  const weeksNeeded = predictedVelocity > 0 ? remainingWork / predictedVelocity : Infinity;
+  const riskMultiplier = 1 + (blockedRatio * 0.45) + (overdueRatio * 0.35);
+  const predictedVelocity = rawPredictedVelocity > 0 ? rawPredictedVelocity / riskMultiplier : 0;
+
+  const weeksNeeded = predictedVelocity > 0 ? remainingWork / predictedVelocity : 52;
   const expectedCompletion = new Date();
-  expectedCompletion.setDate(expectedCompletion.getDate() + (weeksNeeded * 7));
+  expectedCompletion.setDate(expectedCompletion.getDate() + Math.ceil(weeksNeeded * 7));
 
-  // Calculate confidence based on data consistency
-  const velocityVariance = calculateVariance(velocities);
-  const confidence = Math.max(0, Math.min(100, 100 - (velocityVariance * 10)));
+  const deadline = projectEndDate ? new Date(projectEndDate) : null;
+  const weeksUntilDeadline = deadline
+    ? (deadline.getTime() - new Date().getTime()) / (1000 * 3600 * 24 * 7)
+    : 0;
+  const delayWeeks = deadline ? weeksNeeded - weeksUntilDeadline : 0;
+  const status = getPredictionStatus(remainingWork, weeksNeeded, weeksUntilDeadline, Boolean(deadline));
+  const riskLevel = getPredictionRisk(status, blockedRatio, overdueRatio);
+  const confidence = calculatePredictionConfidence(logs.length, tasks.length, weeklyVelocities, progressPercentage);
 
   return {
     expectedCompletionDate: expectedCompletion.toISOString(),
     confidenceLevel: Math.round(confidence),
-    currentVelocity: Math.round(currentVelocity * 10) / 10,
-    predictedVelocity: Math.round(predictedVelocity * 10) / 10,
-    remainingWork: remainingTasks
+    currentVelocity: round(currentVelocity),
+    predictedVelocity: round(predictedVelocity),
+    remainingWork: round(remainingWork),
+    totalWork: round(totalWork),
+    completedWork: round(completedWork),
+    progressPercentage: round(progressPercentage),
+    weeksNeeded: round(weeksNeeded),
+    daysNeeded: Math.ceil(weeksNeeded * 7),
+    delayWeeks: round(delayWeeks),
+    status,
+    riskLevel
   };
 }
 
@@ -198,9 +262,102 @@ function groupLogsByWeek(logs: LogEntry[]): LogEntry[][] {
 }
 
 function calculateVariance(numbers: number[]): number {
+  if (numbers.length === 0) return 0;
   const avg = numbers.reduce((a, b) => a + b, 0) / numbers.length;
   const squareDiffs = numbers.map(n => Math.pow(n - avg, 2));
   return squareDiffs.reduce((a, b) => a + b, 0) / numbers.length;
+}
+
+function calculateWeeklyWorkVelocities(logs: LogEntry[]): number[] {
+  const weeks = groupLogsByWeek(logs);
+
+  return weeks.map(week => week.reduce((sum, log) => {
+    const loggedHours = typeof log.actualHoursSpent === 'number' && log.actualHoursSpent > 0
+      ? log.actualHoursSpent
+      : null;
+    const baseWork = loggedHours ? loggedHours / 4 : 1;
+    const statusWork = log.taskStatus === 'done' ? 1 : log.taskStatus === 'inprogress' ? 0.65 : 0.2;
+    const detailBoost = Math.min(0.25, (log.tasksCompleted?.trim().length || 0) / 400);
+    const problemPenalty = log.problems?.trim() ? 0.9 : 1;
+
+    return sum + (baseWork * (statusWork + detailBoost) * problemPenalty);
+  }, 0));
+}
+
+function getTaskWeight(task: Task): number {
+  const estimatedWork = typeof task.estimatedHours === 'number' && task.estimatedHours > 0
+    ? task.estimatedHours / 4
+    : null;
+  const sizeWork = {
+    small: 0.5,
+    medium: 1,
+    large: 2,
+    very_large: 3.5
+  }[task.size || 'medium'];
+  const difficultyMultiplier = {
+    easy: 0.85,
+    normal: 1,
+    hard: 1.35
+  }[task.difficulty || 'normal'];
+  const priorityMultiplier = {
+    low: 0.9,
+    medium: 1,
+    high: 1.15,
+    critical: 1.3
+  }[task.priority] || 1;
+
+  const descriptionBoost = task.description?.trim().length
+    ? Math.min(0.2, task.description.trim().length / 700)
+    : 0;
+
+  return ((estimatedWork || sizeWork) * difficultyMultiplier * priorityMultiplier) + descriptionBoost;
+}
+
+function calculatePredictionConfidence(
+  logCount: number,
+  taskCount: number,
+  velocities: number[],
+  progressPercentage: number
+): number {
+  const dataScore = Math.min(45, logCount * 4) + Math.min(25, taskCount * 3);
+  const progressScore = Math.min(15, progressPercentage / 4);
+
+  if (velocities.length < 2) {
+    return Math.max(10, Math.min(55, dataScore + progressScore));
+  }
+
+  const avgVelocity = velocities.reduce((sum, velocity) => sum + velocity, 0) / velocities.length;
+  const variance = calculateVariance(velocities);
+  const consistencyPenalty = avgVelocity > 0 ? Math.min(35, (variance / avgVelocity) * 18) : 30;
+
+  return Math.max(10, Math.min(95, dataScore + progressScore + 15 - consistencyPenalty));
+}
+
+function getPredictionStatus(
+  remainingWork: number,
+  weeksNeeded: number,
+  weeksUntilDeadline: number,
+  hasDeadline: boolean
+): ProgressPrediction['status'] {
+  if (remainingWork <= 0) return 'Completed';
+  if (!hasDeadline) return 'Unknown';
+  if (weeksNeeded > weeksUntilDeadline) return 'Behind';
+  if (weeksNeeded > weeksUntilDeadline * 0.9) return 'At Risk';
+  return 'On Track';
+}
+
+function getPredictionRisk(
+  status: ProgressPrediction['status'],
+  blockedRatio: number,
+  overdueRatio: number
+): ProgressPrediction['riskLevel'] {
+  if (status === 'Behind' || blockedRatio > 0.35 || overdueRatio > 0.25) return 'High';
+  if (status === 'At Risk' || blockedRatio > 0 || overdueRatio > 0) return 'Medium';
+  return 'Low';
+}
+
+function round(value: number): number {
+  return Math.round(value * 10) / 10;
 }
 
 function calculateProductivityScore(log: LogEntry): number {

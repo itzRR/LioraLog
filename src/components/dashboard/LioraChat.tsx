@@ -60,7 +60,8 @@ export const LioraChat: React.FC<LioraChatProps> = ({ isOpen, onClose }) => {
       const logsSnapshot = await getDocs(logsQuery);
       const recentLogs = logsSnapshot.docs.map(doc => {
         const data = doc.data();
-        return `${data.date}: ${data.tasksCompleted}`;
+        const hours = data.actualHoursSpent ? `, ${data.actualHoursSpent}h spent` : '';
+        return `${data.date}: ${data.tasksCompleted}${hours}`;
       }).join('\n');
 
       // Get active tasks (not completed)
@@ -73,7 +74,12 @@ export const LioraChat: React.FC<LioraChatProps> = ({ isOpen, onClose }) => {
       const tasksSnapshot = await getDocs(tasksQuery);
       const activeTasks = tasksSnapshot.docs.map(doc => {
         const data = doc.data();
-        return `${data.title} (${data.status}, deadline: ${data.deadline})`;
+        const effort = [
+          data.size ? `size: ${data.size}` : null,
+          data.difficulty ? `difficulty: ${data.difficulty}` : null,
+          data.estimatedHours ? `est: ${data.estimatedHours}h` : null
+        ].filter(Boolean).join(', ');
+        return `${data.title} (${data.status}, deadline: ${data.deadline}${effort ? `, ${effort}` : ''})`;
       }).join('\n');
 
       return `

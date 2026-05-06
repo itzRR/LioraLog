@@ -23,6 +23,7 @@ const NewLog = () => {
     problems: '',
     taskStatus: 'todo',
     moodRating: 3,
+    actualHoursSpent: '',
     projectId: userProfile?.researchProjects?.[0]?.id || '' // Default to first project
   });
 
@@ -46,9 +47,13 @@ const NewLog = () => {
 
     setLoading(true);
     try {
+      const parsedActualHours = Number(formData.actualHoursSpent);
       await addDoc(collection(db, 'logs'), {
         userId: userProfile.uid,
         ...formData,
+        actualHoursSpent: formData.actualHoursSpent.trim() === '' || Number.isNaN(parsedActualHours)
+          ? null
+          : Math.max(0, parsedActualHours),
         createdAt: serverTimestamp()
       });
       navigate('/dashboard');
@@ -175,6 +180,21 @@ const NewLog = () => {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="actualHoursSpent">HOURS SPENT</Label>
+                <Input
+                  type="number"
+                  id="actualHoursSpent"
+                  name="actualHoursSpent"
+                  min="0"
+                  step="0.25"
+                  value={formData.actualHoursSpent}
+                  onChange={handleChange}
+                  className="bg-gray-700/50 border-gray-600 text-white"
+                  placeholder="Optional, e.g. 1.5"
+                />
               </div>
 
               <div className="space-y-2">

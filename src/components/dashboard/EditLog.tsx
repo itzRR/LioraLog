@@ -45,11 +45,15 @@ const EditLog = () => {
     setSaving(true);
     try {
       const ref = doc(db, 'logs', log.id);
+      const parsedActualHours = Number(log.actualHoursSpent);
       await updateDoc(ref, {
         tasksCompleted: log.tasksCompleted || '',
         feedback: log.feedback || '',
         problems: log.problems || '',
         moodRating: log.moodRating || null,
+        actualHoursSpent: log.actualHoursSpent === '' || log.actualHoursSpent == null || Number.isNaN(parsedActualHours)
+          ? null
+          : Math.max(0, parsedActualHours),
         taskStatus: log.taskStatus || 'todo',
         projectId: log.projectId || null, // Save project association
       });
@@ -114,6 +118,19 @@ const EditLog = () => {
             max={5}
             value={log.moodRating ?? ''}
             onChange={(e) => setLog({ ...log, moodRating: parseInt(e.target.value) })}
+            className="bg-gray-800 border border-gray-700 text-white"
+          />
+        </div>
+
+        <div>
+          <Label className="text-gray-300">Hours Spent</Label>
+          <Input
+            type="number"
+            min={0}
+            step={0.25}
+            value={log.actualHoursSpent ?? ''}
+            onChange={(e) => setLog({ ...log, actualHoursSpent: e.target.value })}
+            placeholder="Optional"
             className="bg-gray-800 border border-gray-700 text-white"
           />
         </div>

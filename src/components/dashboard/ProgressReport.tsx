@@ -19,6 +19,7 @@ import {
   Legend,
 } from 'chart.js';
 import { useTasks } from '@/hooks/useTasks';
+import { predictProgress } from '@/lib/aiAnalytics';
 
 ChartJS.register(
   CategoryScale,
@@ -188,88 +189,24 @@ const ProgressReport = () => {
   };
 
   const calculatePrediction = () => {
-    if (!selectedProjectId || !userProfile) return { weeks: 0, progress: 0, riskLevel: 'Low', status: 'Unknown', delay: 0 };
-
-    const currentProject = userProfile.researchProjects.find(p => p.id === selectedProjectId);
-    
-    // 1. Calculate Average Weekly Progress (Moving Average of last 3 weeks)
-    const threeWeeksAgo = new Date();
-    threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21);
-    
-    // Filter logs for this project only (already done by state, but doubling check is safe)
-    const recentLogs = logs.filter(log => new Date(log.date) >= threeWeeksAgo);
-    const completedRecently = recentLogs.filter(log => log.taskStatus === 'done').length;
-    
-    // If no recent logs, use a default slow pace or overall average if available? 
-    // For now, min 0.5 to differ from 0
-    const avgWeeklyProgress = Math.max(0.5, completedRecently / 3); 
-
-    // 2. Count Remaining Work
-    const totalTasks = tasks.length;
-    const completedTasks = tasks.filter(t => t.status === 'completed').length;
-    const remainingTasks = Math.max(0, totalTasks - completedTasks);
-    const progressPercent = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
-
-    // 3. Base Prediction
-    const baseWeeks = remainingTasks / avgWeeklyProgress;
-
-    // 4. Calculate Risk Multiplier
-    const blockedTasks = tasks.filter(t => t.status === 'blocked').length;
-    const missedDeadlines = tasks.filter(t => t.deadline && new Date(t.deadline) < new Date() && t.status !== 'completed').length;
-    
-    const moodLogs = logs.filter(log => log.moodRating);
-    const avgMood = moodLogs.length > 0 
-      ? moodLogs.reduce((a, b) => a + (b.moodRating || 0), 0) / moodLogs.length 
-      : 3; // Default neutral
-
-    let riskMultiplier = 1.0;
-    if (blockedTasks > 0) riskMultiplier += (blockedTasks * 0.1);
-    if (missedDeadlines > 0) riskMultiplier += (missedDeadlines * 0.15);
-    if (avgMood < 3.0) riskMultiplier += 0.2;
-
-    // 5. Final Adjusted Time
-    let estimatedWeeks = baseWeeks * riskMultiplier;
-    
-    // Cap at reasonable max/min. If 0 remaining, 0 weeks.
-    if (remainingTasks === 0) estimatedWeeks = 0;
-    else estimatedWeeks = Math.max(1, Math.min(estimatedWeeks, 52));
-
-    let riskLevel = 'Low';
-    if (riskMultiplier > 1.2) riskLevel = 'Medium';
-    if (riskMultiplier > 1.5) riskLevel = 'High';
-
-    // 6. Deadline Analysis
-    let status = 'On Track';
-    let delayWeeks = 0;
-    
-    if (currentProject?.endDate) {
-      const today = new Date();
-      const deadline = new Date(currentProject.endDate);
-      const daysUntilDeadline = (deadline.getTime() - today.getTime()) / (1000 * 3600 * 24);
-      const weeksUntilDeadline = daysUntilDeadline / 7;
-
-      if (remainingTasks > 0) {
-        if (estimatedWeeks > weeksUntilDeadline) {
-          status = 'Behind';
-          delayWeeks = estimatedWeeks - weeksUntilDeadline;
-          riskLevel = 'High'; // Override risk if deadline is threatened
-        } else if (estimatedWeeks > weeksUntilDeadline * 0.9) {
-          status = 'At Risk';
-          delayWeeks = 0; // Close call
-          riskLevel = riskLevel === 'Low' ? 'Medium' : riskLevel;
-        } else {
-           // Early finish?
-           delayWeeks = -(weeksUntilDeadline - estimatedWeeks); // Negative delay means early
-        }
-      }
+    if (!selectedProjectId || !userProfile) {
+      return { weeks: 0, days: 0, progress: 0, riskLevel: 'Low', status: 'Unknown', delay: 0, confidence: 0, expectedDate: '' };
     }
 
+    const currentProject = userProfile.researchProjects.find(p => p.id === selectedProjectId);
+    const prediction = predictProgress(logs, tasks, currentProject?.endDate || '');
+
     return {
-      weeks: Math.round(estimatedWeeks * 10) / 10,
-      progress: progressPercent,
-      riskLevel,
-      status,
-      delay: Math.round(delayWeeks * 10) / 10,
+      weeks: prediction.weeksNeeded || 0,
+      days: prediction.daysNeeded || 0,
+      progress: prediction.progressPercentage || 0,
+      riskLevel: prediction.riskLevel || 'Low',
+      status: prediction.status || 'Unknown',
+      delay: prediction.delayWeeks || 0,
+      confidence: prediction.confidenceLevel,
+      currentVelocity: prediction.currentVelocity,
+      predictedVelocity: prediction.predictedVelocity,
+      expectedDate: prediction.expectedCompletionDate,
       deadline: currentProject?.endDate
     };
   };
@@ -521,6 +458,9 @@ const ProgressReport = () => {
                     <p className="text-3xl font-bold text-white">
                       {calculatePrediction().weeks} <span className="text-lg text-gray-500 font-normal">WEEKS</span>
                     </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      About {calculatePrediction().days} days, target {calculatePrediction().expectedDate ? new Date(calculatePrediction().expectedDate).toLocaleDateString() : 'N/A'}
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
@@ -557,10 +497,20 @@ const ProgressReport = () => {
                     </p>
                   </div>
                   
+                  <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs text-gray-400">CONFIDENCE</span>
+                      <span className="text-xs font-bold text-cyan-400">{calculatePrediction().confidence}%</span>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Current pace: {calculatePrediction().currentVelocity} work units/week. Adjusted pace: {calculatePrediction().predictedVelocity} work units/week.
+                    </p>
+                  </div>
+
                   <div className="flex items-start gap-2 text-xs text-gray-500 italic bg-purple-900/10 p-2 rounded border border-purple-500/10">
-                    <span>🔮</span>
+                    <span>AI</span>
                     <p>
-                      Disclaimer: Calculated by Liora's algorithm. I might be wrong (I'm just a pile of code, not a fortune teller), but the trends don't lie!
+                      Estimate uses task priority, completion percentage, blocked or overdue work, recent logs, and data consistency.
                     </p>
                   </div>
                 </div>

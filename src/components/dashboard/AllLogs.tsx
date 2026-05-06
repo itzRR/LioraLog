@@ -200,6 +200,10 @@ const AllLogs = () => {
                       <h3 className="text-sm text-gray-400">Mood Rating</h3>
                       <p className="text-gray-300">{log.moodRating ? `${log.moodRating}/5` : 'Not rated'}</p>
                     </div>
+                    <div>
+                      <h3 className="text-sm text-gray-400">Hours Spent</h3>
+                      <p className="text-gray-300">{log.actualHoursSpent ? `${log.actualHoursSpent}h` : 'Not logged'}</p>
+                    </div>
                     {log.feedback && (
                       <div>
                         <h3 className="text-sm text-gray-400">Feedback</h3>
