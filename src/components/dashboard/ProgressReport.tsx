@@ -44,8 +44,13 @@ const AI_QUOTES = [
   "Estimate uses task priority, completion percentage, blocked or overdue work, recent logs, and data consistency.",
   "I'm an AI, not a wizard 🧙‍♂️... but I'm crunching the numbers!",
   "Predicting the future using your past logs... no crystal ball required 🔮",
-  "Analyzing your workflow velocity... and a tiny bit of hope ✨",
-  "Doing the math so you don't have to! 🧮",
+  "Calculating expected completion... based on your *ahem* 'progress' 📉",
+  "Analyzing your procrastination levels... Emotional damage! 💔",
+  "Trying to find your productivity... ERROR 404: Not Found 🤖",
+  "Doing the math so you don't have to... though the math doesn't look good for you right now! 🧮",
+  "Wait, you actually expect to finish on time with this velocity? Hilarious. 😂",
+  "If scrolling social media was a task, you'd be done by now. 📱",
+  "I'm processing your logs... wait, what logs? 🕵️‍♂️"
 ];
 
 const TypewriterQuote = () => {
