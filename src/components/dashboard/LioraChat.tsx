@@ -72,6 +72,10 @@ export const LioraChat: React.FC<LioraChatProps> = ({ isOpen, onClose }) => {
         limit(10)
       );
       const tasksSnapshot = await getDocs(tasksQuery);
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+      const currentDateReadable = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
       const activeTasks = tasksSnapshot.docs.map(doc => {
         const data = doc.data();
         const effort = [
@@ -79,19 +83,37 @@ export const LioraChat: React.FC<LioraChatProps> = ({ isOpen, onClose }) => {
           data.difficulty ? `difficulty: ${data.difficulty}` : null,
           data.estimatedHours ? `est: ${data.estimatedHours}h` : null
         ].filter(Boolean).join(', ');
-        return `${data.title} (${data.status}, deadline: ${data.deadline}${effort ? `, ${effort}` : ''})`;
+
+        // Pre-compute deadline status so the AI doesn't have to guess
+        let deadlineStatus = '';
+        if (data.deadline) {
+          const deadlineDate = new Date(data.deadline + 'T00:00:00');
+          const todayDate = new Date(todayStr + 'T00:00:00');
+          const diffDays = Math.round((deadlineDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
+          if (diffDays < 0) {
+            deadlineStatus = `OVERDUE by ${Math.abs(diffDays)} day(s)`;
+          } else if (diffDays === 0) {
+            deadlineStatus = 'DUE TODAY';
+          } else if (diffDays === 1) {
+            deadlineStatus = 'due tomorrow';
+          } else {
+            deadlineStatus = `due in ${diffDays} days`;
+          }
+        }
+        return `${data.title} (${data.status}, deadline: ${data.deadline} — ${deadlineStatus}${effort ? `, ${effort}` : ''})`;
       }).join('\n');
 
       return `
+IMPORTANT: Today's date is ${currentDateReadable} (${todayStr}). You MUST use this date when discussing deadlines. Do NOT guess or assume a different date.
+
 RESEARCHER'S CONTEXT:
-Current Date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
 Name: ${userProfile.displayName || 'User'}
 Projects: ${projectNames || 'No projects yet'}
 
 Recent Activity (last 5 logs):
 ${recentLogs || 'No recent logs'}
 
-Active Tasks:
+Active Tasks (deadline status is pre-calculated relative to today ${todayStr}):
 ${activeTasks || 'No active tasks'}
 `;
     } catch (err) {
