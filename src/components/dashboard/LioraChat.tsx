@@ -87,15 +87,21 @@ export const LioraChat: React.FC<LioraChatProps> = ({ isOpen, onClose }) => {
         // Pre-compute deadline status so the AI doesn't have to guess
         let deadlineStatus = '';
         if (data.deadline) {
-          const deadlineDate = new Date(data.deadline + 'T00:00:00');
-          const todayDate = new Date(todayStr + 'T00:00:00');
-          const diffDays = Math.round((deadlineDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
-          if (diffDays < 0) {
-            deadlineStatus = `OVERDUE by ${Math.abs(diffDays)} day(s)`;
-          } else if (diffDays === 0) {
-            deadlineStatus = 'DUE TODAY';
-          } else if (diffDays === 1) {
-            deadlineStatus = 'due tomorrow';
+          // End of deadline day (23:59:59) is when the deadline expires
+          const deadlineEnd = new Date(data.deadline + 'T23:59:59');
+          const diffMs = deadlineEnd.getTime() - now.getTime();
+          const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+          const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+          if (diffMs < 0) {
+            // Overdue
+            const overdueDays = Math.abs(Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+            deadlineStatus = `OVERDUE by ${overdueDays} day(s)`;
+          } else if (diffHours <= 24) {
+            // Within 24 hours — show hours for urgency
+            deadlineStatus = `⚠️ URGENT: only ~${diffHours} hour(s) remaining!`;
+          } else if (diffDays <= 2) {
+            deadlineStatus = `due tomorrow (~${diffHours} hours left)`;
           } else {
             deadlineStatus = `due in ${diffDays} days`;
           }
