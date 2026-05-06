@@ -84,6 +84,7 @@ export const LioraChat: React.FC<LioraChatProps> = ({ isOpen, onClose }) => {
 
       return `
 RESEARCHER'S CONTEXT:
+Current Date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
 Name: ${userProfile.displayName || 'User'}
 Projects: ${projectNames || 'No projects yet'}
 
