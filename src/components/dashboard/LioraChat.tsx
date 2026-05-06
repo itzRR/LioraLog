@@ -121,9 +121,13 @@ export const LioraChat: React.FC<LioraChatProps> = ({ isOpen, onClose }) => {
         const projectTasks = allTasks.filter(task => task.projectId === project.id);
         const prediction = predictProgress(projectLogs, projectTasks, project.endDate);
         
+        const predictedDateStr = prediction.predictedVelocity > 0 
+          ? new Date(prediction.expectedCompletionDate).toLocaleDateString()
+          : 'Unknown (0 velocity - need more progress to predict)';
+
         return `- ${project.researchTitle}:
     Status: ${prediction.status} (Risk: ${prediction.riskLevel})
-    Predicted Completion: ${new Date(prediction.expectedCompletionDate).toLocaleDateString()}
+    Predicted Completion: ${predictedDateStr}
     Velocity: ${prediction.currentVelocity} tasks/week
     Progress: ${prediction.progressPercentage}% (${prediction.completedWork} / ${prediction.totalWork} work units)
     Confidence Level: ${prediction.confidenceLevel}%
