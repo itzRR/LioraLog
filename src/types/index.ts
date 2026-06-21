@@ -121,6 +121,15 @@ export interface ProgressPrediction {
   delayWeeks?: number;
   status?: 'Completed' | 'On Track' | 'At Risk' | 'Behind' | 'Unknown';
   riskLevel?: 'Low' | 'Medium' | 'High';
+  // Monte Carlo range estimates
+  optimisticDate?: string;       // P25 — best case
+  pessimisticDate?: string;      // P75 — worst case
+  optimisticWeeks?: number;
+  pessimisticWeeks?: number;
+  // New analysis signals
+  estimationBias?: number;       // e.g., 1.3 = "you underestimate by 30%"
+  completionVelocity?: number;   // Δ% per week across tasks
+  velocityTrend?: 'accelerating' | 'stable' | 'decelerating';
 }
 
 export interface MoodProductivityData {

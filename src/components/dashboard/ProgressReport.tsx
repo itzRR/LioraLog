@@ -264,7 +264,7 @@ const ProgressReport = () => {
 
   const calculatePrediction = () => {
     if (!selectedProjectId || !userProfile) {
-      return { weeks: 0, days: 0, progress: 0, riskLevel: 'Low', status: 'Unknown', delay: 0, confidence: 0, expectedDate: '' };
+      return { weeks: 0, days: 0, progress: 0, riskLevel: 'Low', status: 'Unknown', delay: 0, confidence: 0, expectedDate: '', optimisticDate: '', pessimisticDate: '', optimisticWeeks: 0, pessimisticWeeks: 0, velocityTrend: 'stable' as const, estimationBias: 1.0, completionVelocity: 0, currentVelocity: 0, predictedVelocity: 0, deadline: '' };
     }
 
     const currentProject = userProfile.researchProjects.find(p => p.id === selectedProjectId);
@@ -281,7 +281,14 @@ const ProgressReport = () => {
       currentVelocity: prediction.currentVelocity,
       predictedVelocity: prediction.predictedVelocity,
       expectedDate: prediction.expectedCompletionDate,
-      deadline: currentProject?.endDate
+      deadline: currentProject?.endDate,
+      optimisticDate: prediction.optimisticDate || '',
+      pessimisticDate: prediction.pessimisticDate || '',
+      optimisticWeeks: prediction.optimisticWeeks || 0,
+      pessimisticWeeks: prediction.pessimisticWeeks || 0,
+      velocityTrend: prediction.velocityTrend || 'stable',
+      estimationBias: prediction.estimationBias || 1.0,
+      completionVelocity: prediction.completionVelocity || 0
     };
   };
 
@@ -516,6 +523,14 @@ const ProgressReport = () => {
             </div>
 
             {/* Prediction Card */}
+            {(() => {
+              const pred = calculatePrediction();
+              const trendIcon = pred.velocityTrend === 'accelerating' ? '📈' : pred.velocityTrend === 'decelerating' ? '📉' : '→';
+              const trendColor = pred.velocityTrend === 'accelerating' ? 'text-green-400' : pred.velocityTrend === 'decelerating' ? 'text-red-400' : 'text-gray-400';
+              const trendLabel = pred.velocityTrend === 'accelerating' ? 'Accelerating' : pred.velocityTrend === 'decelerating' ? 'Slowing Down' : 'Stable';
+              const hasBias = pred.estimationBias !== 1.0 && pred.estimationBias > 0;
+              const biasPercent = Math.round(Math.abs(pred.estimationBias - 1) * 100);
+              return (
             <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 border border-purple-500/20 rounded-lg p-6 relative overflow-hidden">
               <div className="absolute top-0 right-0 p-4 opacity-10">
                 <TrendingUp className="w-24 h-24 text-purple-500" />
@@ -523,6 +538,9 @@ const ProgressReport = () => {
               <h3 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-4 flex items-center gap-2">
                 <BarChart2 className="w-5 h-5 text-purple-400" />
                 LIORA'S PREDICTION
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${trendColor} ${pred.velocityTrend === 'accelerating' ? 'border-green-500/30 bg-green-900/20' : pred.velocityTrend === 'decelerating' ? 'border-red-500/30 bg-red-900/20' : 'border-gray-600 bg-gray-800/50'}`}>
+                  {trendIcon} {trendLabel}
+                </span>
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
@@ -530,21 +548,39 @@ const ProgressReport = () => {
                   <div className="mb-4">
                     <p className="text-gray-400 text-sm mb-1">ESTIMATED COMPLETION</p>
                     <p className="text-3xl font-bold text-white">
-                      {calculatePrediction().weeks} <span className="text-lg text-gray-500 font-normal">WEEKS</span>
+                      {pred.weeks} <span className="text-lg text-gray-500 font-normal">WEEKS</span>
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      About {calculatePrediction().days} days, target {calculatePrediction().expectedDate ? new Date(calculatePrediction().expectedDate).toLocaleDateString() : 'N/A'}
+                      About {pred.days} days, target {pred.expectedDate ? new Date(pred.expectedDate).toLocaleDateString() : 'N/A'}
                     </p>
                   </div>
+
+                  {/* Monte Carlo Date Range */}
+                  {pred.optimisticDate && pred.pessimisticDate && pred.optimisticWeeks > 0 && (
+                    <div className="mb-4 bg-gray-800/70 rounded-lg p-3 border border-purple-500/10">
+                      <p className="text-xs text-gray-400 mb-2">COMPLETION RANGE (Monte Carlo)</p>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-green-400 font-medium whitespace-nowrap">🟢 {new Date(pred.optimisticDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                        <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden relative">
+                          <div className="absolute inset-y-0 bg-gradient-to-r from-green-500/60 via-cyan-500/60 to-orange-500/60 rounded-full" style={{ left: '10%', right: '10%' }} />
+                        </div>
+                        <span className="text-orange-400 font-medium whitespace-nowrap">{new Date(pred.pessimisticDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} 🟠</span>
+                      </div>
+                      <p className="text-[10px] text-gray-600 mt-1 text-center">
+                        Best case ~{pred.optimisticWeeks}w · Worst case ~{pred.pessimisticWeeks}w
+                      </p>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Current Progress</span>
-                      <span className="text-cyan-400">{Math.round(calculatePrediction().progress)}%</span>
+                      <span className="text-cyan-400">{Math.round(pred.progress)}%</span>
                     </div>
                     <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-1000"
-                        style={{ width: `${calculatePrediction().progress}%` }}
+                        style={{ width: `${pred.progress}%` }}
                       />
                     </div>
                   </div>
@@ -555,18 +591,18 @@ const ProgressReport = () => {
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-xs text-gray-400">STATUS</span>
                       <span className={`text-xs font-bold ${
-                        calculatePrediction().status === 'Behind' ? 'text-red-400' :
-                        calculatePrediction().status === 'At Risk' ? 'text-yellow-400' :
+                        pred.status === 'Behind' ? 'text-red-400' :
+                        pred.status === 'At Risk' ? 'text-yellow-400' :
                         'text-green-400'
                       }`}>
-                        {calculatePrediction().status.toUpperCase()}
+                        {pred.status.toUpperCase()}
                       </span>
                     </div>
                     <p className="text-xs text-gray-500">
-                      {calculatePrediction().status === 'Behind' 
-                        ? `Projected to finish ${calculatePrediction().delay} weeks LATE based on deadline.`
-                        : calculatePrediction().delay < 0 
-                          ? `On track to finish ${Math.abs(calculatePrediction().delay)} weeks EARLY!`
+                      {pred.status === 'Behind' 
+                        ? `Projected to finish ${pred.delay} weeks LATE based on deadline.`
+                        : pred.delay < 0 
+                          ? `On track to finish ${Math.abs(pred.delay)} weeks EARLY!`
                           : `On track to meet deadline.`}
                     </p>
                   </div>
@@ -574,21 +610,41 @@ const ProgressReport = () => {
                   <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-xs text-gray-400">CONFIDENCE</span>
-                      <span className="text-xs font-bold text-cyan-400">{calculatePrediction().confidence}%</span>
+                      <span className="text-xs font-bold text-cyan-400">{pred.confidence}%</span>
                     </div>
                     <p className="text-xs text-gray-500">
-                      Current pace: {calculatePrediction().currentVelocity} work units/week. Adjusted pace: {calculatePrediction().predictedVelocity} work units/week.
+                      Current pace: {pred.currentVelocity} work units/week. Adjusted pace: {pred.predictedVelocity} work units/week.
                     </p>
                   </div>
+
+                  {/* Estimation Bias Alert */}
+                  {hasBias && biasPercent >= 10 && (
+                    <div className={`rounded-lg p-3 border text-xs ${
+                      pred.estimationBias > 1 
+                        ? 'bg-orange-900/10 border-orange-500/20 text-orange-300' 
+                        : 'bg-blue-900/10 border-blue-500/20 text-blue-300'
+                    }`}>
+                      <span className="font-medium">
+                        {pred.estimationBias > 1 
+                          ? `⚠️ You tend to underestimate by ~${biasPercent}%` 
+                          : `✨ You tend to overestimate by ~${biasPercent}%`}
+                      </span>
+                      <p className="text-[10px] mt-0.5 opacity-70">
+                        {pred.estimationBias > 1 
+                          ? 'Prediction adjusted upward to account for this.' 
+                          : 'Prediction adjusted — you may finish sooner.'}
+                      </p>
+                    </div>
+                  )}
 
                   <div className="flex items-start gap-2 text-xs text-gray-500 italic bg-purple-900/10 p-2 rounded border border-purple-500/10 min-h-[48px]">
                     <span className="font-bold text-purple-400 mt-1">Liora</span>
                     <p className="flex-1">
                       <TypewriterQuote 
                         isDoingPoorly={
-                          calculatePrediction().status === 'Behind' || 
-                          calculatePrediction().status === 'At Risk' || 
-                          (calculatePrediction().currentVelocity === 0 && calculatePrediction().status !== 'Completed')
+                          pred.status === 'Behind' || 
+                          pred.status === 'At Risk' || 
+                          (pred.currentVelocity === 0 && pred.status !== 'Completed')
                         } 
                       />
                     </p>
@@ -596,6 +652,8 @@ const ProgressReport = () => {
                 </div>
               </div>
             </div>
+              );
+            })()}
           </div>
         )}
       </main>

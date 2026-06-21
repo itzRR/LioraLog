@@ -30,6 +30,7 @@ import { checkAndCreateAlerts } from '@/lib/riskDetection';
 import { useTasks } from '@/hooks/useTasks';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { predictProgress } from '@/lib/aiAnalytics';
 import NewLog from './NewLog';
 import EditLog from './EditLog';
 import CalendarView from './CalendarView';
@@ -839,7 +840,75 @@ if (loading || !userProfile) {
           </Card>
         </div>
 
-        {/* Recent Logs */}
+        {/* Deadline Prediction Widget */}
+        {userProfile?.researchProjects?.length > 0 && (() => {
+          const activeProject = userProfile.researchProjects[0];
+          const prediction = predictProgress(recentLogs as any, tasks, activeProject?.endDate || '');
+          const hasData = prediction.confidenceLevel > 0;
+          if (!hasData) return null;
+          const trendIcon = prediction.velocityTrend === 'accelerating' ? '📈' : prediction.velocityTrend === 'decelerating' ? '📉' : '→';
+          const trendColor = prediction.velocityTrend === 'accelerating' ? 'text-green-400' : prediction.velocityTrend === 'decelerating' ? 'text-red-400' : 'text-gray-400';
+          const statusColor = prediction.status === 'Behind' ? 'from-red-600/20 to-red-900/10 border-red-500/30' : prediction.status === 'At Risk' ? 'from-yellow-600/20 to-yellow-900/10 border-yellow-500/30' : prediction.status === 'On Track' ? 'from-green-600/20 to-green-900/10 border-green-500/30' : 'from-gray-700/20 to-gray-800/10 border-gray-600/30';
+          const statusBadgeColor = prediction.status === 'Behind' ? 'bg-red-900/50 text-red-300' : prediction.status === 'At Risk' ? 'bg-yellow-900/50 text-yellow-300' : prediction.status === 'On Track' ? 'bg-green-900/50 text-green-300' : 'bg-gray-700/50 text-gray-300';
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.4 }}
+              className={`mb-8 bg-gradient-to-r ${statusColor} border rounded-xl p-5 cursor-pointer hover:shadow-lg hover:shadow-purple-900/10 transition-all duration-300`}
+              onClick={handleViewReport}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-purple-600/20 border border-purple-500/30 rounded-lg">
+                    <TrendingUp className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">DEADLINE PREDICTION</h3>
+                      <Badge className={`text-[10px] ${statusBadgeColor}`}>{prediction.status?.toUpperCase()}</Badge>
+                      <span className={`text-xs ${trendColor}`}>{trendIcon} {prediction.velocityTrend}</span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">{activeProject.researchTitle}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 sm:gap-6">
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-white">{prediction.weeksNeeded ? `${prediction.weeksNeeded}w` : 'N/A'}</p>
+                    <p className="text-[10px] text-gray-500 uppercase">Expected</p>
+                  </div>
+                  {prediction.optimisticDate && prediction.pessimisticDate && (
+                    <div className="hidden sm:block text-center">
+                      <div className="flex items-center gap-1 text-xs">
+                        <span className="text-green-400">{new Date(prediction.optimisticDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                        <span className="text-gray-600">–</span>
+                        <span className="text-orange-400">{new Date(prediction.pessimisticDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                      </div>
+                      <p className="text-[10px] text-gray-500 uppercase">Range</p>
+                    </div>
+                  )}
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-cyan-400">{prediction.confidenceLevel}%</p>
+                    <p className="text-[10px] text-gray-500 uppercase">Confidence</p>
+                  </div>
+                  <div className="hidden md:block w-24">
+                    <div className="flex justify-between text-[10px] text-gray-500 mb-0.5">
+                      <span>Progress</span>
+                      <span>{Math.round(prediction.progressPercentage || 0)}%</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-cyan-500 to-purple-500 transition-all duration-1000 rounded-full" style={{ width: `${prediction.progressPercentage || 0}%` }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {prediction.status === 'Behind' && prediction.delayWeeks && prediction.delayWeeks > 0 && (
+                <p className="text-xs text-red-300/70 mt-2 pl-12">⚠️ Projected to finish {prediction.delayWeeks} weeks late. Tap for details →</p>
+              )}
+            </motion.div>
+          );
+        })()}
+
         <Card className="bg-gray-800/50 border border-cyan-400/20">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2 text-cyan-400">
