@@ -410,20 +410,24 @@ if (loading || !userProfile) {
 
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-200">
-      {/* Header */}
-      <header className="bg-gray-800/50 border-b border-cyan-400/20 shadow-lg shadow-cyan-500/10">
+    <div className="min-h-screen bg-[#0a0a0f] text-gray-200 relative overflow-hidden font-sans selection:bg-cyan-500/30">
+      {/* Ambient Glowing Orbs */}
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-purple-900/20 blur-[120px] pointer-events-none mix-blend-screen" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[50%] rounded-full bg-cyan-900/10 blur-[150px] pointer-events-none mix-blend-screen" />
+      <div className="absolute top-[40%] left-[20%] w-[30%] h-[30%] rounded-full bg-blue-900/10 blur-[100px] pointer-events-none mix-blend-screen" />
+      {/* Sleek Floating Header */}
+      <header className="relative z-10 bg-white/[0.02] border-b border-white/[0.05] backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 gap-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-full">
-                <Terminal className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            <div className="flex items-center space-x-3 group cursor-pointer">
+              <div className="p-2.5 bg-gradient-to-br from-cyan-500/20 to-purple-600/20 rounded-xl border border-white/10 group-hover:border-cyan-400/50 transition-colors duration-500">
+                <Terminal className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400 group-hover:text-purple-400 transition-colors duration-500" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
-                  RESEARCH TRACKER
+                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-cyan-400 group-hover:to-purple-500 transition-all duration-500">
+                  LIORA LOG
                 </h1>
-                <p className="text-xs sm:text-sm text-gray-400">AI-POWERED PROGRESS MONITORING</p>
+                <p className="text-[10px] sm:text-xs text-gray-500 font-medium tracking-widest">INTELLIGENT PROGRESS</p>
               </div>
             </div>
             
@@ -438,36 +442,44 @@ if (loading || !userProfile) {
               />
             )}
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full sm:w-auto gap-3 sm:gap-4">
-              <div className="text-left sm:text-right w-full sm:w-auto">
-                <p className="text-sm font-medium text-cyan-400 truncate max-w-[200px] sm:max-w-none">{userProfile?.displayName}</p>
-                <p className="text-xs text-gray-400 uppercase">{userProfile?.role}</p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full sm:w-auto gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-500 to-purple-600 p-[1px]">
+                  <div className="w-full h-full rounded-full bg-gray-900 flex items-center justify-center">
+                    <span className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">
+                      {userProfile?.displayName?.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-bold text-white tracking-wide truncate max-w-[150px] sm:max-w-none">{userProfile?.displayName}</p>
+                  <p className="text-[10px] text-cyan-500 font-medium uppercase tracking-wider">{userProfile?.role}</p>
+                </div>
               </div>
               
               <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
                 <SystemGuideModal />
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 bg-white/[0.03] border border-white/5 rounded-full p-1 backdrop-blur-md">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={toggleMute}
-                    className="text-cyan-400 hover:text-cyan-300 hover:bg-gray-700/50 px-2"
+                    className="h-8 w-8 rounded-full p-0 text-gray-400 hover:text-cyan-400 hover:bg-white/10 transition-colors"
                     title={isMuted ? "Unmute Liora" : "Mute Liora"}
                   >
-                    {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                    {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                   </Button>
                   <Button 
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={async () => {
                       await logout();
                       navigate('/login');
                     }}
-                    className="border-gray-600 hover:bg-gray-700/50 hover:border-cyan-400 text-gray-300"
+                    className="h-8 px-3 rounded-full text-gray-400 hover:text-pink-400 hover:bg-white/10 transition-colors text-xs font-bold tracking-wider"
                   >
-                    <LogOut className="w-4 h-4 sm:mr-2" />
-                    <span className="hidden sm:inline">LOGOUT</span>
+                    LOGOUT
                   </Button>
                 </div>
               </div>
@@ -477,40 +489,61 @@ if (loading || !userProfile) {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-        {/* Welcome Section - Enhanced */}
-        <div className="mb-6 sm:mb-8 bg-gradient-to-r from-gray-800/50 via-gray-800/30 to-gray-800/50 border border-cyan-400/20 rounded-xl p-6 backdrop-blur-sm">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg">
-              <Terminal className="w-5 h-5 text-white" />
+        {/* Hero Welcome Section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="mb-12 sm:mb-20 mt-8 relative z-10"
+        >
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+            <div className="max-w-2xl">
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2, duration: 0.8 }}
+                className="flex items-center gap-2 mb-4"
+              >
+                <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                <p className="text-cyan-400 text-xs font-bold tracking-[0.2em] uppercase">
+                  {getGreeting()}
+                </p>
+              </motion.div>
+              <h2 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.1] mb-6">
+                Welcome back,<br/>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-500 to-purple-600 pb-2 inline-block">
+                  {userProfile?.displayName?.split(' ')[0]}
+                </span>
+              </h2>
+              
+              {userProfile?.researchProjects && userProfile.researchProjects.length > 0 ? (
+                <p className="text-gray-400 text-lg sm:text-xl font-light leading-relaxed">
+                  You are currently leading <span className="text-white font-medium">{userProfile.researchProjects.length}</span> active research {userProfile.researchProjects.length === 1 ? 'project' : 'projects'}. Keep pushing the boundaries. 🚀
+                </p>
+              ) : (
+                <div className="inline-flex items-center gap-3 bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 px-4 py-3 rounded-2xl backdrop-blur-md">
+                  <span>⚠️</span>
+                  <p className="text-sm font-medium">No active research projects found. Create one to begin your journey.</p>
+                </div>
+              )}
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500">
-              {getGreeting()}, {userProfile?.displayName?.split(' ')[0]}
-            </h2>
+
+            <div className="flex flex-col items-start md:items-end gap-4">
+              {/* Supervisor/Admin Action */}
+              {(userProfile?.role === 'supervisor' || userProfile?.role === 'admin') && (
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    onClick={() => navigate('/supervisor')}
+                    className="h-12 px-6 rounded-full bg-white text-black hover:bg-gray-200 font-bold tracking-wide shadow-[0_0_30px_rgba(255,255,255,0.2)] transition-all duration-300"
+                  >
+                    <Users className="w-5 h-5 mr-2" />
+                    {userProfile.role === 'admin' ? 'VIEW ALL STUDENTS' : 'MY STUDENTS'}
+                  </Button>
+                </motion.div>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {userProfile?.researchProjects && userProfile.researchProjects.length > 0 ? (
-              <>
-                <span className="text-gray-400">You're working on</span>
-                <Badge className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold px-3 py-1 text-sm">
-                  {userProfile.researchProjects.length} {userProfile.researchProjects.length === 1 ? 'PROJECT' : 'PROJECTS'}
-                </Badge>
-                <span className="text-gray-400">• Keep up the great work! 🚀</span>
-              </>
-            ) : (
-              <span className="text-yellow-400 font-medium">⚠️ No active research projects - Create one below to get started!</span>
-            )}
-          </div>
-          {/* Supervisor/Admin Button */}
-          {(userProfile?.role === 'supervisor' || userProfile?.role === 'admin') && (
-            <Button
-              onClick={() => navigate('/supervisor')}
-              className="mt-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 w-full sm:w-auto shadow-lg shadow-purple-500/20"
-            >
-              <Users className="w-4 h-4 mr-2" />
-              {userProfile.role === 'admin' ? 'VIEW ALL STUDENTS' : 'MY STUDENTS'}
-            </Button>
-          )}
-        </div>
+        </motion.div>
 
         {/* Research Projects Section */}
         <Card className="bg-gray-800/50 border border-cyan-400/20 mb-8">
@@ -746,111 +779,94 @@ if (loading || !userProfile) {
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <Button 
-            onClick={handleNewLog}
-            className="h-16 sm:h-20 flex flex-col space-y-1 sm:space-y-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 border border-cyan-400/20"
-          >
-            <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
-            <span className="text-xs sm:text-sm">NEW LOG</span>
-          </Button>
-          <Button 
-            onClick={() => navigate('/all-logs')}
-            variant="outline" 
-            className="h-16 sm:h-20 flex flex-col space-y-1 sm:space-y-2 border-gray-600 hover:bg-gray-800/50 hover:border-cyan-400"
-          >
-            <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400" />
-            <span className="text-xs sm:text-sm">ALL LOGS</span>
-          </Button>
-          <Button 
-            onClick={handleViewTasks}
-            variant="outline" 
-            className="h-16 sm:h-20 flex flex-col space-y-1 sm:space-y-2 border-gray-600 hover:bg-gray-800/50 hover:border-cyan-400"
-          >
-            <ListTodo className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
-            <span className="text-xs sm:text-sm">TASKS</span>
-          </Button>
-          <Button 
-            onClick={handleViewAlerts}
-            variant="outline" 
-            className="h-16 sm:h-20 flex flex-col space-y-1 sm:space-y-2 border-gray-600 hover:bg-gray-800/50 hover:border-cyan-400 relative"
-          >
-            <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400" />
-            <span className="text-xs sm:text-sm">ALERTS</span>
-            {unreadCount > 0 && (
-              <Badge className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2">
-                {unreadCount}
-              </Badge>
-            )}
-          </Button>
-          <Button 
-            onClick={handleViewCalendar}
-            variant="outline" 
-            className="h-16 sm:h-20 flex flex-col space-y-1 sm:space-y-2 border-gray-600 hover:bg-gray-800/50 hover:border-cyan-400"
-          >
-            <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" />
-            <span className="text-xs sm:text-sm">CALENDAR</span>
-          </Button>
-          <Button
-            onClick={handleViewReport}
-            variant="outline"
-            className="h-16 sm:h-20 flex flex-col space-y-1 sm:space-y-2 border-gray-600 hover:bg-gray-800/50 hover:border-cyan-400"
-          >
-            <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-pink-400" />
-            <span className="text-xs sm:text-sm">REPORT</span>
-          </Button>
-        </div>
+        {/* Quick Actions - Floating Glass */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.6 }}
+          className="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4 mb-12 relative z-10"
+        >
+          {[
+            { icon: Plus, label: 'NEW LOG', color: 'text-cyan-400', action: handleNewLog },
+            { icon: ListTodo, label: 'TASKS', color: 'text-blue-400', action: handleViewTasks },
+            { icon: Bell, label: 'ALERTS', color: 'text-yellow-400', action: handleViewAlerts, badge: unreadCount },
+            { icon: Calendar, label: 'CALENDAR', color: 'text-purple-400', action: handleViewCalendar },
+            { icon: TrendingUp, label: 'REPORT', color: 'text-pink-400', action: handleViewReport },
+          ].map((item, idx) => (
+            <motion.button
+              key={idx}
+              whileHover={{ y: -5, scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={item.action}
+              className="group relative flex flex-col items-center justify-center h-24 sm:h-28 bg-white/[0.02] border border-white/5 backdrop-blur-xl rounded-2xl hover:bg-white/[0.05] hover:border-white/10 transition-all duration-300 overflow-hidden"
+            >
+              {/* Subtle hover gradient */}
+              <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              
+              {item.badge !== undefined && item.badge > 0 && (
+                <div className="absolute top-3 right-3 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-[0_0_10px_rgba(239,68,68,0.5)]">
+                  {item.badge}
+                </div>
+              )}
+              <item.icon className={`w-6 h-6 sm:w-8 sm:h-8 ${item.color} mb-3 group-hover:scale-110 transition-transform duration-500`} />
+              <span className="text-[10px] sm:text-xs font-bold text-gray-400 group-hover:text-white tracking-widest transition-colors duration-300">
+                {item.label}
+              </span>
+            </motion.button>
+          ))}
+        </motion.div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card className="bg-gray-800/50 border border-cyan-400/20">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-400">TOTAL LOGS</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-cyan-400">{stats.totalLogs}</div>
-              <p className="text-xs text-gray-500">ALL TIME ENTRIES</p>
-            </CardContent>
-          </Card>
+        {/* Stats Grid - Asymmetric Layout */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.6 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-12 relative z-10"
+        >
+          <div className="col-span-2 md:col-span-1 bg-white/[0.02] border border-white/5 backdrop-blur-xl rounded-3xl p-6 flex flex-col justify-between hover:bg-white/[0.04] transition-colors">
+            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">TOTAL LOGS</p>
+            <div>
+              <div className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-cyan-400 to-blue-600 mb-1">{stats.totalLogs}</div>
+              <p className="text-xs text-gray-400">All time entries</p>
+            </div>
+          </div>
           
-          <Card className="bg-gray-800/50 border border-cyan-400/20">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-400">THIS WEEK</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-400">{stats.weeklyLogs}</div>
-              <p className="text-xs text-gray-500">LOG ENTRIES</p>
-            </CardContent>
-          </Card>
+          <div className="bg-white/[0.02] border border-white/5 backdrop-blur-xl rounded-3xl p-6 flex flex-col justify-between hover:bg-white/[0.04] transition-colors">
+            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">THIS WEEK</p>
+            <div>
+              <div className="text-3xl sm:text-4xl font-black text-green-400 mb-1">{stats.weeklyLogs}</div>
+              <p className="text-xs text-gray-400">Recent entries</p>
+            </div>
+          </div>
           
-          <Card className="bg-gray-800/50 border border-cyan-400/20">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-400">COMPLETED TASKS</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-400">{stats.completedTasks}</div>
-              <p className="text-xs text-gray-500">TASKS FINISHED</p>
-            </CardContent>
-          </Card>
+          <div className="bg-white/[0.02] border border-white/5 backdrop-blur-xl rounded-3xl p-6 flex flex-col justify-between hover:bg-white/[0.04] transition-colors">
+            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">COMPLETED</p>
+            <div>
+              <div className="text-3xl sm:text-4xl font-black text-purple-400 mb-1">{stats.completedTasks}</div>
+              <p className="text-xs text-gray-400">Tasks finished</p>
+            </div>
+          </div>
           
-          <Card className="bg-gray-800/50 border border-cyan-400/20">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-400">AVG. MOOD</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-400">
+          <div className="bg-white/[0.02] border border-white/5 backdrop-blur-xl rounded-3xl p-6 flex flex-col justify-between hover:bg-white/[0.04] transition-colors">
+            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">AVG MOOD</p>
+            <div>
+              <div className="text-3xl sm:text-4xl font-black text-orange-400 mb-1">
                 {stats.avgMood > 0 ? `${stats.avgMood}/5` : 'N/A'}
               </div>
-              <p className="text-xs text-gray-500">FOCUS RATING</p>
-            </CardContent>
-          </Card>
-        </div>
+              <p className="text-xs text-gray-400">Focus rating</p>
+            </div>
+          </div>
+        </motion.div>
 
         {/* Deadline Prediction Widget */}
         {userProfile?.researchProjects?.length > 0 && (() => {
           const activeProject = userProfile.researchProjects.find(p => p.id === selectedPredictionProjectId) || userProfile.researchProjects[0];
-          const prediction = predictProgress(recentLogs as any, tasks, activeProject?.endDate || '');
+          
+          // Filter logs and tasks for the currently selected project
+          const projectLogs = recentLogs.filter(log => log.projectId === activeProject.id || !log.projectId) as LogEntry[];
+          const projectTasks = tasks.filter(t => t.projectId === activeProject.id);
+          
+          const prediction = predictProgress(projectLogs, projectTasks, activeProject?.endDate || '');
           const hasData = prediction.confidenceLevel > 0;
           if (!hasData) return null;
 
