@@ -68,6 +68,13 @@ const Dashboard = () => {
   const { tasks } = useTasks(); // Get all tasks for alert generation
   
   const [editingProject, setEditingProject] = useState<ResearchProject | null>(null);
+  const [selectedPredictionProjectId, setSelectedPredictionProjectId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (userProfile?.researchProjects?.length > 0 && !selectedPredictionProjectId) {
+      setSelectedPredictionProjectId(userProfile.researchProjects[0].id);
+    }
+  }, [userProfile, selectedPredictionProjectId]);
   const [isAddingProject, setIsAddingProject] = useState(false);
   const [newProjectData, setNewProjectData] = useState({
     researchTitle: '',
@@ -842,39 +849,72 @@ if (loading || !userProfile) {
 
         {/* Deadline Prediction Widget */}
         {userProfile?.researchProjects?.length > 0 && (() => {
-          const activeProject = userProfile.researchProjects[0];
+          const activeProject = userProfile.researchProjects.find(p => p.id === selectedPredictionProjectId) || userProfile.researchProjects[0];
           const prediction = predictProgress(recentLogs as any, tasks, activeProject?.endDate || '');
           const hasData = prediction.confidenceLevel > 0;
           if (!hasData) return null;
+
+          const isDeadlinePassed = activeProject.endDate && new Date(activeProject.endDate) < new Date() && prediction.status !== 'Completed';
+
           const trendIcon = prediction.velocityTrend === 'accelerating' ? '📈' : prediction.velocityTrend === 'decelerating' ? '📉' : '→';
           const trendColor = prediction.velocityTrend === 'accelerating' ? 'text-green-400' : prediction.velocityTrend === 'decelerating' ? 'text-red-400' : 'text-gray-400';
-          const statusColor = prediction.status === 'Behind' ? 'from-red-600/20 to-red-900/10 border-red-500/30' : prediction.status === 'At Risk' ? 'from-yellow-600/20 to-yellow-900/10 border-yellow-500/30' : prediction.status === 'On Track' ? 'from-green-600/20 to-green-900/10 border-green-500/30' : 'from-gray-700/20 to-gray-800/10 border-gray-600/30';
-          const statusBadgeColor = prediction.status === 'Behind' ? 'bg-red-900/50 text-red-300' : prediction.status === 'At Risk' ? 'bg-yellow-900/50 text-yellow-300' : prediction.status === 'On Track' ? 'bg-green-900/50 text-green-300' : 'bg-gray-700/50 text-gray-300';
+          
+          let statusColor = '';
+          let statusBadgeColor = '';
+          let displayStatus = '';
+          
+          if (isDeadlinePassed) {
+             statusColor = 'from-red-900/40 to-gray-900/40 border-red-500/50';
+             statusBadgeColor = 'bg-red-950 border border-red-500 text-red-400';
+             displayStatus = 'DEADLINE PASSED';
+          } else {
+             statusColor = prediction.status === 'Behind' ? 'from-red-600/20 to-red-900/10 border-red-500/30' : prediction.status === 'At Risk' ? 'from-yellow-600/20 to-yellow-900/10 border-yellow-500/30' : prediction.status === 'On Track' ? 'from-green-600/20 to-green-900/10 border-green-500/30' : 'from-gray-700/20 to-gray-800/10 border-gray-600/30';
+             statusBadgeColor = prediction.status === 'Behind' ? 'bg-red-900/50 text-red-300' : prediction.status === 'At Risk' ? 'bg-yellow-900/50 text-yellow-300' : prediction.status === 'On Track' ? 'bg-green-900/50 text-green-300' : 'bg-gray-700/50 text-gray-300';
+             displayStatus = prediction.status?.toUpperCase() || 'UNKNOWN';
+          }
+
           return (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.4 }}
-              className={`mb-8 bg-gradient-to-r ${statusColor} border rounded-xl p-5 cursor-pointer hover:shadow-lg hover:shadow-purple-900/10 transition-all duration-300`}
-              onClick={handleViewReport}
+              className={`mb-8 bg-gradient-to-r ${statusColor} border rounded-xl p-5 hover:shadow-lg hover:shadow-purple-900/10 transition-all duration-300`}
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-purple-600/20 border border-purple-500/30 rounded-lg">
+                  <div className="p-2.5 bg-purple-600/20 border border-purple-500/30 rounded-lg cursor-pointer" onClick={handleViewReport}>
                     <TrendingUp className="w-5 h-5 text-purple-400" />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap mb-1 cursor-pointer" onClick={handleViewReport}>
                       <h3 className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">DEADLINE PREDICTION</h3>
-                      <Badge className={`text-[10px] ${statusBadgeColor}`}>{prediction.status?.toUpperCase()}</Badge>
+                      <Badge className={`text-[10px] ${statusBadgeColor}`}>{displayStatus}</Badge>
                       <span className={`text-xs ${trendColor}`}>{trendIcon} {prediction.velocityTrend}</span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5">{activeProject.researchTitle}</p>
+                    {userProfile.researchProjects.length > 1 ? (
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <Select 
+                          value={activeProject.id} 
+                          onValueChange={(val) => setSelectedPredictionProjectId(val)}
+                        >
+                          <SelectTrigger className="h-7 text-xs bg-gray-800/50 border-gray-600/50 w-[200px] text-gray-300">
+                            <SelectValue placeholder="Select project" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
+                            {userProfile.researchProjects.map(p => (
+                              <SelectItem key={p.id} value={p.id} className="text-xs">{p.researchTitle}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 mt-0.5 cursor-pointer" onClick={handleViewReport}>{activeProject.researchTitle}</p>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-4 sm:gap-6">
+                <div className="flex items-center gap-4 sm:gap-6 cursor-pointer" onClick={handleViewReport}>
                   <div className="text-center">
-                    <p className="text-lg font-bold text-white">{prediction.weeksNeeded ? `${prediction.weeksNeeded}w` : 'N/A'}</p>
+                    <p className={`text-lg font-bold ${isDeadlinePassed ? 'text-red-400' : 'text-white'}`}>{prediction.weeksNeeded ? `${prediction.weeksNeeded}w` : 'N/A'}</p>
                     <p className="text-[10px] text-gray-500 uppercase">Expected</p>
                   </div>
                   {prediction.optimisticDate && prediction.pessimisticDate && (
@@ -902,8 +942,11 @@ if (loading || !userProfile) {
                   </div>
                 </div>
               </div>
-              {prediction.status === 'Behind' && prediction.delayWeeks && prediction.delayWeeks > 0 && (
+              {prediction.status === 'Behind' && prediction.delayWeeks && prediction.delayWeeks > 0 && !isDeadlinePassed && (
                 <p className="text-xs text-red-300/70 mt-2 pl-12">⚠️ Projected to finish {prediction.delayWeeks} weeks late. Tap for details →</p>
+              )}
+              {isDeadlinePassed && (
+                <p className="text-xs text-red-400 font-medium mt-2 pl-12">⚠️ Your deadline has already passed and the project is not completed.</p>
               )}
             </motion.div>
           );

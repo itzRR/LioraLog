@@ -525,13 +525,30 @@ const ProgressReport = () => {
             {/* Prediction Card */}
             {(() => {
               const pred = calculatePrediction();
+              const isDeadlinePassed = pred.deadline && new Date(pred.deadline) < new Date() && pred.status !== 'Completed';
+
               const trendIcon = pred.velocityTrend === 'accelerating' ? '📈' : pred.velocityTrend === 'decelerating' ? '📉' : '→';
               const trendColor = pred.velocityTrend === 'accelerating' ? 'text-green-400' : pred.velocityTrend === 'decelerating' ? 'text-red-400' : 'text-gray-400';
               const trendLabel = pred.velocityTrend === 'accelerating' ? 'Accelerating' : pred.velocityTrend === 'decelerating' ? 'Slowing Down' : 'Stable';
               const hasBias = pred.estimationBias !== 1.0 && pred.estimationBias > 0;
               const biasPercent = Math.round(Math.abs(pred.estimationBias - 1) * 100);
+
+              let statusColor = '';
+              let statusBadgeColor = '';
+              let displayStatus = '';
+              
+              if (isDeadlinePassed) {
+                 statusColor = 'from-red-900/40 to-gray-900/40 border-red-500/50';
+                 statusBadgeColor = 'text-red-400';
+                 displayStatus = 'DEADLINE PASSED';
+              } else {
+                 statusColor = 'from-gray-800/50 to-gray-900/50 border-purple-500/20';
+                 statusBadgeColor = pred.status === 'Behind' ? 'text-red-400' : pred.status === 'At Risk' ? 'text-yellow-400' : 'text-green-400';
+                 displayStatus = pred.status.toUpperCase();
+              }
+
               return (
-            <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 border border-purple-500/20 rounded-lg p-6 relative overflow-hidden">
+            <div className={`bg-gradient-to-r ${statusColor} border rounded-lg p-6 relative overflow-hidden`}>
               <div className="absolute top-0 right-0 p-4 opacity-10">
                 <TrendingUp className="w-24 h-24 text-purple-500" />
               </div>
@@ -547,7 +564,7 @@ const ProgressReport = () => {
                 <div>
                   <div className="mb-4">
                     <p className="text-gray-400 text-sm mb-1">ESTIMATED COMPLETION</p>
-                    <p className="text-3xl font-bold text-white">
+                    <p className={`text-3xl font-bold ${isDeadlinePassed ? 'text-red-400' : 'text-white'}`}>
                       {pred.weeks} <span className="text-lg text-gray-500 font-normal">WEEKS</span>
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
@@ -590,20 +607,18 @@ const ProgressReport = () => {
                   <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-xs text-gray-400">STATUS</span>
-                      <span className={`text-xs font-bold ${
-                        pred.status === 'Behind' ? 'text-red-400' :
-                        pred.status === 'At Risk' ? 'text-yellow-400' :
-                        'text-green-400'
-                      }`}>
-                        {pred.status.toUpperCase()}
+                      <span className={`text-xs font-bold ${statusBadgeColor}`}>
+                        {displayStatus}
                       </span>
                     </div>
                     <p className="text-xs text-gray-500">
-                      {pred.status === 'Behind' 
-                        ? `Projected to finish ${pred.delay} weeks LATE based on deadline.`
-                        : pred.delay < 0 
-                          ? `On track to finish ${Math.abs(pred.delay)} weeks EARLY!`
-                          : `On track to meet deadline.`}
+                      {isDeadlinePassed 
+                        ? 'The deadline has already passed and the project is not completed.'
+                        : pred.status === 'Behind' 
+                          ? `Projected to finish ${pred.delay} weeks LATE based on deadline.`
+                          : pred.delay < 0 
+                            ? `On track to finish ${Math.abs(pred.delay)} weeks EARLY!`
+                            : `On track to meet deadline.`}
                     </p>
                   </div>
                   
