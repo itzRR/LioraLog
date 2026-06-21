@@ -430,17 +430,6 @@ if (loading || !userProfile) {
                 <p className="text-[10px] sm:text-xs text-gray-500 font-medium tracking-widest">INTELLIGENT PROGRESS</p>
               </div>
             </div>
-            
-            {showWelcomeModal && (
-              <LioraWelcomeModal open={showWelcomeModal} onClose={() => setShowWelcomeModal(false)} />
-            )}
-
-            {showGreeting && (
-              <LioraGreetingToast
-                message={greetingMessage}
-                onClose={() => setShowGreeting(false)}
-              />
-            )}
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full sm:w-auto gap-4">
               <div className="flex items-center gap-3">
@@ -1097,6 +1086,18 @@ if (loading || !userProfile) {
 
       {/* Floating AI Chat Button */}
       <LioraChatButton />
+
+      {/* Global Modals & Toasts */}
+      {showWelcomeModal && (
+        <LioraWelcomeModal open={showWelcomeModal} onClose={() => setShowWelcomeModal(false)} />
+      )}
+
+      {showGreeting && (
+        <LioraGreetingToast
+          message={greetingMessage}
+          onClose={() => setShowGreeting(false)}
+        />
+      )}
     </div>
   );
 };
