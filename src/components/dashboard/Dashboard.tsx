@@ -51,6 +51,7 @@ interface LogEntry {
   moodRating?: number;
   actualHoursSpent?: number | null;
   userId: string;
+  projectId?: string;
   createdAt: string;
 }
 
