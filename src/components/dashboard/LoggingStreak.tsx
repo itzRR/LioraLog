@@ -22,7 +22,12 @@ const LoggingStreak: React.FC<LoggingStreakProps> = ({ logs }) => {
 
     const weekSet = new Set<string>();
     for (const log of logs) {
-      weekSet.add(getWeekKey(new Date(log.createdAt)));
+      // Handle undefined, Firestore Timestamps, and invalid strings
+      const raw = (log as any).createdAt;
+      if (!raw) continue;
+      const d = raw.toDate ? raw.toDate() : new Date(raw);
+      if (isNaN(d.getTime())) continue;
+      weekSet.add(getWeekKey(d));
     }
 
     // Check consecutive weeks backwards from this week

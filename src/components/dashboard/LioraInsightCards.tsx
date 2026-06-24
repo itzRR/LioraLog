@@ -21,6 +21,14 @@ const LioraInsightCards: React.FC<LioraInsightCardsProps> = ({ logs, tasks, proj
   const insights = useMemo(() => {
     const cards: InsightCard[] = [];
 
+    // Safe date parser — handles undefined, Firestore Timestamps, and invalid strings
+    const safeDate = (val: any): Date | null => {
+      if (!val) return null;
+      if (val.toDate && typeof val.toDate === 'function') return val.toDate();
+      const d = new Date(val);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
     if (tasks.length === 0 && logs.length === 0) return cards;
 
     const prediction = predictProgress(logs, tasks, projectEndDate);
@@ -73,7 +81,8 @@ const LioraInsightCards: React.FC<LioraInsightCardsProps> = ({ logs, tasks, proj
     const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 3600 * 1000);
     const stagnantTasks = tasks.filter(task => {
       if (task.status !== 'in_progress') return false;
-      const updated = new Date(task.updatedAt);
+      const updated = safeDate(task.updatedAt) || safeDate(task.createdAt);
+      if (!updated) return false;
       return updated < twoWeeksAgo && task.completionPercentage < 80;
     });
     if (stagnantTasks.length > 0) {
@@ -123,7 +132,10 @@ const LioraInsightCards: React.FC<LioraInsightCardsProps> = ({ logs, tasks, proj
 
     // 6. Low logging frequency
     const twoWeeksAgoDate = new Date(now.getTime() - 14 * 24 * 3600 * 1000);
-    const recentLogCount = logs.filter(l => new Date(l.createdAt) >= twoWeeksAgoDate).length;
+    const recentLogCount = logs.filter(l => {
+      const d = safeDate(l.createdAt);
+      return d ? d >= twoWeeksAgoDate : false;
+    }).length;
     if (logs.length > 0 && recentLogCount < 3) {
       cards.push({
         emoji: '📝',
