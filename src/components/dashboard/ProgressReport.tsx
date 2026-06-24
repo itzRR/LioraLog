@@ -4,7 +4,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, TrendingUp, BarChart2 } from 'lucide-react';
+import { ChevronLeft, TrendingUp, BarChart2, Zap } from 'lucide-react';
 import { Bar, Line } from 'react-chartjs-2';
 import { motion } from "framer-motion";
 import {
@@ -130,6 +130,7 @@ const ProgressReport = () => {
   const [logs, setLogs] = useState([]);
   const [timeRange, setTimeRange] = useState('week');
   const [loading, setLoading] = useState(true);
+  const [whatIfMultiplier, setWhatIfMultiplier] = useState(1.0);
 
   useEffect(() => {
     if (!userProfile || !selectedProjectId) return;
@@ -289,6 +290,21 @@ const ProgressReport = () => {
       velocityTrend: prediction.velocityTrend || 'stable',
       estimationBias: prediction.estimationBias || 1.0,
       completionVelocity: prediction.completionVelocity || 0
+    };
+  };
+
+  const calculateWhatIfPrediction = (multiplier: number) => {
+    if (!selectedProjectId || !userProfile) return null;
+    const currentProject = userProfile.researchProjects.find(p => p.id === selectedProjectId);
+    const prediction = predictProgress(logs, tasks, currentProject?.endDate || '', multiplier);
+    return {
+      weeks: prediction.weeksNeeded || 0,
+      days: prediction.daysNeeded || 0,
+      status: prediction.status || 'Unknown',
+      expectedDate: prediction.expectedCompletionDate,
+      optimisticDate: prediction.optimisticDate || '',
+      pessimisticDate: prediction.pessimisticDate || '',
+      delay: prediction.delayWeeks || 0
     };
   };
 
@@ -667,6 +683,93 @@ const ProgressReport = () => {
                 </div>
               </div>
             </div>
+              );
+            })()}
+
+            {/* What-If Speed Simulator */}
+            {(() => {
+              const whatIf = whatIfMultiplier !== 1.0 ? calculateWhatIfPrediction(whatIfMultiplier) : null;
+              const speedPercent = Math.round((whatIfMultiplier - 1) * 100);
+              const speedLabel = speedPercent > 0 ? `+${speedPercent}%` : `${speedPercent}%`;
+              
+              return (
+                <div className="bg-gradient-to-r from-indigo-900/30 to-purple-900/20 border border-indigo-500/20 rounded-lg p-6 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <Zap className="w-20 h-20 text-indigo-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 mb-4 flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-indigo-400" />
+                    WHAT-IF SIMULATOR
+                  </h3>
+                  <p className="text-xs text-gray-400 mb-4">
+                    Drag the slider to see how changing your work speed affects your predicted deadline.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <span className="text-xs text-gray-500 w-12">-50%</span>
+                      <input
+                        type="range"
+                        min="0.5"
+                        max="2.0"
+                        step="0.05"
+                        value={whatIfMultiplier}
+                        onChange={(e) => setWhatIfMultiplier(parseFloat(e.target.value))}
+                        className="flex-1 h-2 bg-gray-700 rounded-full appearance-none cursor-pointer accent-indigo-500"
+                        style={{
+                          background: `linear-gradient(to right, #ef4444 0%, #6366f1 50%, #22c55e 100%)`
+                        }}
+                      />
+                      <span className="text-xs text-gray-500 w-14 text-right">+100%</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-center gap-2">
+                      <span className={`text-sm font-bold ${speedPercent > 0 ? 'text-green-400' : speedPercent < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                        {whatIfMultiplier === 1.0 ? 'Current Speed' : `${speedLabel} Speed`}
+                      </span>
+                      {whatIfMultiplier !== 1.0 && (
+                        <button
+                          onClick={() => setWhatIfMultiplier(1.0)}
+                          className="text-[10px] text-gray-500 hover:text-white underline"
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
+                    
+                    {whatIf && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        key={whatIfMultiplier}
+                        className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-gray-800/50 rounded-lg p-4 border border-indigo-500/10"
+                      >
+                        <div className="text-center">
+                          <p className="text-xl font-bold text-white">{whatIf.weeks}<span className="text-sm text-gray-500">w</span></p>
+                          <p className="text-[10px] text-gray-500 uppercase">Weeks Needed</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xl font-bold text-indigo-400">
+                            {whatIf.expectedDate ? new Date(whatIf.expectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
+                          </p>
+                          <p className="text-[10px] text-gray-500 uppercase">New Date</p>
+                        </div>
+                        <div className="text-center">
+                          <p className={`text-xl font-bold ${whatIf.status === 'Behind' ? 'text-red-400' : whatIf.status === 'At Risk' ? 'text-yellow-400' : whatIf.status === 'On Track' ? 'text-green-400' : 'text-gray-400'}`}>
+                            {whatIf.status}
+                          </p>
+                          <p className="text-[10px] text-gray-500 uppercase">Status</p>
+                        </div>
+                        <div className="text-center">
+                          <p className={`text-xl font-bold ${whatIf.delay > 0 ? 'text-red-400' : whatIf.delay < 0 ? 'text-green-400' : 'text-gray-400'}`}>
+                            {whatIf.delay > 0 ? `+${whatIf.delay}` : whatIf.delay < 0 ? `${whatIf.delay}` : '0'}w
+                          </p>
+                          <p className="text-[10px] text-gray-500 uppercase">Delay</p>
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                </div>
               );
             })()}
           </div>

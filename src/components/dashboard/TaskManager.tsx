@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useTasks } from '@/hooks/useTasks';
 import { Task } from '@/types';
-import { Plus, Edit, Trash2, Calendar, AlertCircle, CheckCircle2, Clock, ChevronLeft, ListTodo } from 'lucide-react';
+import { Plus, Edit, Trash2, Calendar, AlertCircle, CheckCircle2, Clock, ChevronLeft, ListTodo, Link } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -46,7 +46,8 @@ const TaskManager: React.FC<TaskManagerProps> = ({ projectId }) => {
     status: 'not_started' as Task['status'],
     deadline: '',
     completionPercentage: 0,
-    projectId: projectId || ''
+    projectId: projectId || '',
+    dependsOn: [] as string[]
   });
 
   const handleOpenDialog = (task?: Task) => {
@@ -62,7 +63,8 @@ const TaskManager: React.FC<TaskManagerProps> = ({ projectId }) => {
         status: task.status,
         deadline: new Date(task.deadline).toISOString().split('T')[0],
         completionPercentage: task.completionPercentage,
-        projectId: task.projectId
+        projectId: task.projectId,
+        dependsOn: task.dependsOn || []
       });
     } else {
       setEditingTask(null);
@@ -76,7 +78,8 @@ const TaskManager: React.FC<TaskManagerProps> = ({ projectId }) => {
         status: 'not_started',
         deadline: '',
         completionPercentage: 0,
-        projectId: selectedProject || projectId || ''
+        projectId: selectedProject || projectId || '',
+        dependsOn: []
       });
     }
     setIsDialogOpen(true);
@@ -105,7 +108,8 @@ const TaskManager: React.FC<TaskManagerProps> = ({ projectId }) => {
       ...formData,
       estimatedHours,
       deadline: new Date(formData.deadline).toISOString(),
-      projectId: selectedProject || projectId || ''
+      projectId: selectedProject || projectId || '',
+      dependsOn: formData.dependsOn.length > 0 ? formData.dependsOn : []
     };
 
     if (editingTask) {
@@ -270,6 +274,12 @@ const TaskManager: React.FC<TaskManagerProps> = ({ projectId }) => {
                         </span>
                         <span>Status: {task.status.replace('_', ' ')}</span>
                         {task.estimatedHours ? <span>Est: {task.estimatedHours}h</span> : null}
+                        {task.dependsOn && task.dependsOn.length > 0 && (
+                          <span className="flex items-center gap-1 text-purple-400">
+                            <Link className="w-3 h-3" />
+                            {task.dependsOn.length} dep{task.dependsOn.length > 1 ? 's' : ''}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -437,6 +447,40 @@ const TaskManager: React.FC<TaskManagerProps> = ({ projectId }) => {
                   className="bg-gray-700/50 border-gray-600 text-white"
                 />
               </div>
+            </div>
+            {/* Depends On (multi-select) */}
+            <div>
+              <Label className="text-gray-300">Depends On</Label>
+              <div className="mt-1 max-h-28 overflow-y-auto bg-gray-700/30 border border-gray-600 rounded-md p-2 space-y-1">
+                {tasks.filter(t => t.id !== editingTask?.id).length === 0 ? (
+                  <p className="text-xs text-gray-500">No other tasks available</p>
+                ) : (
+                  tasks.filter(t => t.id !== editingTask?.id).map(t => (
+                    <label key={t.id} className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer hover:bg-gray-600/30 p-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={formData.dependsOn.includes(t.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFormData({ ...formData, dependsOn: [...formData.dependsOn, t.id] });
+                          } else {
+                            setFormData({ ...formData, dependsOn: formData.dependsOn.filter(id => id !== t.id) });
+                          }
+                        }}
+                        className="rounded border-gray-500 bg-gray-700 text-cyan-500 focus:ring-cyan-500"
+                      />
+                      <span className="truncate">{t.title}</span>
+                      <Badge className={`text-[9px] ml-auto ${getPriorityColor(t.priority)}`}>{t.priority}</Badge>
+                    </label>
+                  ))
+                )}
+              </div>
+              {formData.dependsOn.length > 0 && (
+                <p className="text-[10px] text-purple-400 mt-1">
+                  <Link className="w-3 h-3 inline mr-1" />
+                  {formData.dependsOn.length} dependenc{formData.dependsOn.length === 1 ? 'y' : 'ies'} selected
+                </p>
+              )}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="border-gray-600">

@@ -37,6 +37,8 @@ import CalendarView from './CalendarView';
 import TaskManager from './TaskManager';
 import { LioraChatButton } from './LioraChat';
 import SystemGuideModal from './SystemGuideModal';
+import LioraInsightCards from './LioraInsightCards';
+import LoggingStreak from './LoggingStreak';
 
 
 
@@ -812,7 +814,7 @@ if (loading || !userProfile) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.6 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-12 relative z-10"
+          className="grid grid-cols-2 md:grid-cols-5 gap-4 sm:gap-6 mb-12 relative z-10"
         >
           <div className="col-span-2 md:col-span-1 bg-white/[0.02] border border-white/5 backdrop-blur-xl rounded-3xl p-6 flex flex-col justify-between hover:bg-white/[0.04] transition-colors">
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">TOTAL LOGS</p>
@@ -847,6 +849,9 @@ if (loading || !userProfile) {
               <p className="text-xs text-gray-400">Focus rating</p>
             </div>
           </div>
+
+          {/* Logging Streak */}
+          <LoggingStreak logs={recentLogs} />
         </motion.div>
 
         {/* Deadline Prediction Widget */}
@@ -956,6 +961,20 @@ if (loading || !userProfile) {
                 <p className="text-xs text-red-400 font-medium mt-2 pl-12">⚠️ Your deadline has already passed and the project is not completed.</p>
               )}
             </motion.div>
+          );
+        })()}
+
+        {/* Liora's AI Insight Cards */}
+        {userProfile?.researchProjects?.length > 0 && (() => {
+          const activeProject = userProfile.researchProjects.find(p => p.id === selectedPredictionProjectId) || userProfile.researchProjects[0];
+          const projectLogs = recentLogs.filter(log => log.projectId === activeProject.id || !log.projectId);
+          const projectTasks = tasks.filter(t => t.projectId === activeProject.id);
+          return (
+            <LioraInsightCards
+              logs={projectLogs as any}
+              tasks={projectTasks}
+              projectEndDate={activeProject?.endDate || ''}
+            />
           );
         })()}
 

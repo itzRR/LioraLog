@@ -55,6 +55,7 @@ export interface Task {
   status: 'not_started' | 'in_progress' | 'completed' | 'blocked';
   deadline: string;
   completionPercentage: number;
+  dependsOn?: string[];       // IDs of tasks this task depends on
   createdAt: string;
   updatedAt: string;
 }

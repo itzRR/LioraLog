@@ -127,8 +127,8 @@ function detectStagnation(tasks: Task[]): number {
 }
 
 /**
- * Smarter risk multiplier that considers priority of blocked/overdue tasks
- * and detects stagnation as pseudo-blocking.
+ * Smarter risk multiplier that considers priority of blocked/overdue tasks,
+ * detects stagnation as pseudo-blocking, and penalizes dependency chains.
  */
 function calculateRiskMultiplier(
   weightedTasks: Array<{ task: Task; weight: number; remaining: number }>,
@@ -146,7 +146,12 @@ function calculateRiskMultiplier(
 
   let weightedBlockedRatio = 0;
   let weightedOverdueRatio = 0;
+  let dependencyRiskRatio = 0;
   const now = new Date();
+
+  // Build a map for quick task lookup by ID
+  const taskMap = new Map<string, Task>();
+  for (const t of tasks) taskMap.set(t.id, t);
 
   for (const { task, remaining } of weightedTasks) {
     const severity = prioritySeverity[task.priority] || 1;
@@ -158,11 +163,26 @@ function calculateRiskMultiplier(
     if (task.deadline && new Date(task.deadline) < now && task.status !== 'completed') {
       weightedOverdueRatio += workRatio * severity;
     }
+
+    // Dependency risk: if any dependency is blocked, overdue, or behind
+    if (task.dependsOn && task.dependsOn.length > 0) {
+      for (const depId of task.dependsOn) {
+        const dep = taskMap.get(depId);
+        if (!dep) continue;
+        const depIsAtRisk =
+          dep.status === 'blocked' ||
+          (dep.deadline && new Date(dep.deadline) < now && dep.status !== 'completed') ||
+          (dep.status === 'in_progress' && dep.completionPercentage < 50);
+        if (depIsAtRisk) {
+          dependencyRiskRatio += workRatio * severity * 0.5;
+        }
+      }
+    }
   }
 
   const stagnationRatio = detectStagnation(tasks);
 
-  return 1 + (weightedBlockedRatio * 0.40) + (weightedOverdueRatio * 0.30) + (stagnationRatio * 0.25);
+  return 1 + (weightedBlockedRatio * 0.40) + (weightedOverdueRatio * 0.30) + (stagnationRatio * 0.25) + (dependencyRiskRatio * 0.20);
 }
 
 /**
@@ -250,7 +270,8 @@ function calculateBayesianConfidence(
 export function predictProgress(
   logs: LogEntry[],
   tasks: Task[],
-  projectEndDate: string
+  projectEndDate: string,
+  velocityMultiplier: number = 1.0
 ): ProgressPrediction {
   const weightedTasks = tasks.map(task => {
     const weight = getTaskWeight(task);
@@ -331,6 +352,9 @@ export function predictProgress(
   } else {
     blendedVelocity = Math.max(currentVelocity, averageVelocity);
   }
+
+  // Apply What-If velocity multiplier (default 1.0 = no change)
+  blendedVelocity *= Math.max(0.1, velocityMultiplier);
 
   // Apply estimation bias
   const biasAdjustedWork = remainingWork * Math.max(0.7, Math.min(1.5, estimationBias));
@@ -521,11 +545,20 @@ function calculateVariance(numbers: number[]): number {
 function calculateWeeklyWorkVelocities(logs: LogEntry[]): number[] {
   const weeks = groupLogsByWeek(logs);
 
+  // Smart default: compute median actualHoursSpent from user's own data
+  const hoursValues = logs
+    .map(l => l.actualHoursSpent)
+    .filter((h): h is number => typeof h === 'number' && h > 0)
+    .sort((a, b) => a - b);
+  const medianHours = hoursValues.length > 0
+    ? hoursValues[Math.floor(hoursValues.length / 2)]
+    : 4; // Fallback to 4 if no data
+
   return weeks.map(week => week.reduce((sum, log) => {
     const loggedHours = typeof log.actualHoursSpent === 'number' && log.actualHoursSpent > 0
       ? log.actualHoursSpent
       : null;
-    const baseWork = loggedHours ? loggedHours / 4 : 1;
+    const baseWork = loggedHours ? loggedHours / medianHours : 1;
     const statusWork = log.taskStatus === 'done' ? 1 : log.taskStatus === 'inprogress' ? 0.65 : 0.2;
     const detailBoost = Math.min(0.25, (log.tasksCompleted?.trim().length || 0) / 400);
     const problemPenalty = log.problems?.trim() ? 0.9 : 1;
